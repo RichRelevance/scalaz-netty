@@ -79,9 +79,9 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
     }
 
     // do not call more than once!
-    def read: Process[Task, ByteVector] = queue.dequeue
+    private def read: Process[Task, ByteVector] = queue.dequeue
 
-    def write: Sink[Task, ByteVector] = {
+    private def write: Sink[Task, ByteVector] = {
       def inner(bv: ByteVector): Task[Unit] = {
         Task delay {
           val data = bv.toArray
