@@ -22,7 +22,11 @@ object Netty {
     }
   }
 
-  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default): Process[Task, Exchange[ByteVector, ByteVector]] = ???
+  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default): Process[Task, Exchange[ByteVector, ByteVector]] = {
+    Process.await(Client(to, config)) { client: Client =>
+      Process(Exchange(client.read, client.write)) onComplete Process.eval(client.shutdown).drain
+    }
+  }
 
   private[netty] def toTask(f: ChannelFuture): Task[Unit] = {
     Task async { (cb: (Throwable \/ Unit) => Unit) =>
@@ -38,8 +42,3 @@ object Netty {
   }
 }
 
-final case class ClientConfig(keepAlive: Boolean)
-
-object ClientConfig {
-  val Default = ClientConfig(true)
-}
