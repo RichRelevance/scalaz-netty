@@ -52,6 +52,11 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
       server.queue.enqueueOne(process).run
     }
 
+    override def channelInactive(ctx: ChannelHandlerContext): Unit = {
+      // if the connection is remotely closed, we need to clean things up on our side
+      queue.close.run
+    }
+
     override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
       val buf = msg.asInstanceOf[ByteBuf]
       val bv = ByteVector(buf.nioBuffer)       // copy data (alternatives are insanely clunky)
