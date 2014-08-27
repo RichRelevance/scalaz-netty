@@ -50,11 +50,15 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
         Process(Exchange(read, write)) onComplete Process.eval(shutdown).drain
 
       server.queue.enqueueOne(process).run
+
+      super.channelActive(ctx)
     }
 
     override def channelInactive(ctx: ChannelHandlerContext): Unit = {
       // if the connection is remotely closed, we need to clean things up on our side
       queue.close.run
+
+      super.channelInactive(ctx)
     }
 
     override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
@@ -64,10 +68,14 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
 
       // because this is run and not runAsync, we have backpressure propagation
       queue.enqueueOne(bv).run
+
+      super.channelRead(ctx, msg)
     }
 
     override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
       queue.fail(t).run
+
+      super.exceptionCaught(ctx, t)
     }
 
     // do not call more than once!
