@@ -23,9 +23,9 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
   private var channel: _root_.io.netty.channel.Channel = _
 
   // represents incoming connections
-  private val queue = async.boundedQueue[Process[Task, Exchange[ByteVector, ByteVector]]](limit)
+  private val queue = async.boundedQueue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])](limit)
 
-  def listen: Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] =
+  def listen: Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] =
     queue.dequeue
 
   def shutdown: Task[Unit] = {
@@ -49,7 +49,10 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
       val process: Process[Task, Exchange[ByteVector, ByteVector]] =
         Process(Exchange(read, write)) onComplete Process.eval(shutdown).drain
 
-      server.queue.enqueueOne(process).run
+      // gross...
+      val addr = channel.remoteAddress.asInstanceOf[InetSocketAddress]
+
+      server.queue.enqueueOne((addr, process)).run
 
       super.channelActive(ctx)
     }

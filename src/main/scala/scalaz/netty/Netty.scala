@@ -16,7 +16,7 @@ import _root_.io.netty.channel._
  */
 object Netty {
 
-  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default): Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] = {
+  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
     Process.await(Server(bind, config)) { server: Server =>
       server.listen onComplete Process.eval(server.shutdown).drain
     }

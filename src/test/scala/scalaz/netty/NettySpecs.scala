@@ -33,9 +33,11 @@ object NettySpecs extends Specification with NoTimeConversions {
     "round trip some simple data" in {
       val addr = new InetSocketAddress("localhost", 9090)
 
-      val server = Netty server addr take 1 flatMap { incoming =>
-        incoming flatMap { exchange =>
-          exchange.read take 1 to exchange.write drain
+      val server = Netty server addr take 1 flatMap {
+        case (_, incoming) => {
+          incoming flatMap { exchange =>
+            exchange.read take 1 to exchange.write drain
+          }
         }
       }
 
