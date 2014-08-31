@@ -18,7 +18,7 @@ import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] final class Client(workerGroup: NioEventLoopGroup, limit: Int) {
+private[netty] final class Client(limit: Int) {
   // this isn't ugly or anything...
   private var channel: _root_.io.netty.channel.Channel = _
 
@@ -45,10 +45,6 @@ private[netty] final class Client(workerGroup: NioEventLoopGroup, limit: Int) {
     for {
       _ <- Netty toTask channel.close()
       _ <- queue.close
-
-      _ <- Task delay {
-        workerGroup.shutdownGracefully()
-      }
     } yield ()
   }
 
@@ -80,13 +76,10 @@ private[netty] final class Client(workerGroup: NioEventLoopGroup, limit: Int) {
 
 private[netty] object Client {
   def apply(to: InetSocketAddress, config: ClientConfig): Task[Client] = Task delay {
-    // TODO share this pool
-    val workerGroup = new NioEventLoopGroup(1)
-
-    val client = new Client(workerGroup, config.limit)
+    val client = new Client(config.limit)
     val bootstrap = new Bootstrap
 
-    bootstrap.group(workerGroup)
+    bootstrap.group(Netty.workerGroup)
     bootstrap.channel(classOf[NioSocketChannel])
 
     bootstrap.option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)

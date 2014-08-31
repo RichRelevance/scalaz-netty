@@ -18,7 +18,7 @@ import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventLoopGroup, limit: Int) { server =>
+private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =>
   // this isn't ugly or anything...
   private var channel: _root_.io.netty.channel.Channel = _
 
@@ -34,7 +34,6 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
       _ <- queue.close
 
       _ <- Task delay {
-        workerGroup.shutdownGracefully()
         bossGroup.shutdownGracefully()
       }
     } yield ()
@@ -110,22 +109,21 @@ private[netty] object Server {
   def apply(bind: InetSocketAddress, config: ServerConfig): Task[Server] = Task delay {
     val bossGroup = new NioEventLoopGroup(config.numThreads)
 
-    // TODO share this pool
-    val workerGroup = new NioEventLoopGroup(1)
-
-    val server = new Server(bossGroup, workerGroup, config.limit)
+    val server = new Server(bossGroup, config.limit)
     val bootstrap = new ServerBootstrap
 
-    bootstrap.group(bossGroup, workerGroup)
+    bootstrap.group(bossGroup, Netty.workerGroup)
       .channel(classOf[NioServerSocketChannel])
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
       .childHandler(new ChannelInitializer[SocketChannel] {
         def initChannel(ch: SocketChannel): Unit = {
-          // TODO if we want this to be a generally-useful library, we should probably make frame coding configurable
-          ch.pipeline
-            .addLast("frame encoding", new LengthFieldPrepender(4))
-            .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
-            .addLast("incoming handler", new server.Handler(ch))
+          if (config.codeFrames) {
+            ch.pipeline
+              .addLast("frame encoding", new LengthFieldPrepender(4))
+              .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
+          }
+
+          ch.pipeline.addLast("incoming handler", new server.Handler(ch))
         }
       })
 
@@ -140,9 +138,9 @@ private[netty] object Server {
   } join
 }
 
-final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int)
+final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean)
 
 object ServerConfig {
   // 1000?  does that even make sense?
-  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000)
+  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true)
 }
