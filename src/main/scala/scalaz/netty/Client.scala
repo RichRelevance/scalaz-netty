@@ -51,6 +51,31 @@ private[netty] final class Client(workerGroup: NioEventLoopGroup, limit: Int) {
       }
     } yield ()
   }
+
+  private final class Handler extends ChannelInboundHandlerAdapter {
+
+    override def channelInactive(ctx: ChannelHandlerContext): Unit = {
+      // if the connection is remotely closed, we need to clean things up on our side
+      queue.close.run
+
+      super.channelInactive(ctx)
+    }
+
+    override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
+      val buf = msg.asInstanceOf[ByteBuf]
+      val bv = ByteVector(buf.nioBuffer)       // copy data (alternatives are insanely clunky)
+      buf.release()
+
+      // because this is run and not runAsync, we have backpressure propagation
+      queue.enqueueOne(bv).run
+    }
+
+    override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
+      queue.fail(t).run
+
+      // super.exceptionCaught(ctx, t)
+    }
+  }
 }
 
 private[netty] object Client {
@@ -71,6 +96,7 @@ private[netty] object Client {
         ch.pipeline
           .addLast("frame encoding", new LengthFieldPrepender(4))
           .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
+          .addLast("incoming handler", new client.Handler)
       }
     })
 

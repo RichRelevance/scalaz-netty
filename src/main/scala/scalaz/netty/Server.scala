@@ -68,14 +68,12 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, workerGroup: NioEventL
 
       // because this is run and not runAsync, we have backpressure propagation
       queue.enqueueOne(bv).run
-
-      super.channelRead(ctx, msg)
     }
 
     override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
       queue.fail(t).run
 
-      super.exceptionCaught(ctx, t)
+      // super.exceptionCaught(ctx, t)
     }
 
     // do not call more than once!
@@ -116,19 +114,17 @@ private[netty] object Server {
     val bootstrap = new ServerBootstrap
 
     bootstrap.group(bossGroup, workerGroup)
-    bootstrap.channel(classOf[NioServerSocketChannel])
-
-    bootstrap.childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
-
-    bootstrap.childHandler(new ChannelInitializer[SocketChannel] {
-      def initChannel(ch: SocketChannel): Unit = {
-        // TODO if we want this to be a generally-useful library, we should probably make frame coding configurable
-        ch.pipeline
-          .addLast("frame encoding", new LengthFieldPrepender(4))
-          .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
-          .addLast("incoming handler", new server.Handler(ch))
-      }
-    })
+      .channel(classOf[NioServerSocketChannel])
+      .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
+      .childHandler(new ChannelInitializer[SocketChannel] {
+        def initChannel(ch: SocketChannel): Unit = {
+          // TODO if we want this to be a generally-useful library, we should probably make frame coding configurable
+          ch.pipeline
+            .addLast("frame encoding", new LengthFieldPrepender(4))
+            .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
+            .addLast("incoming handler", new server.Handler(ch))
+        }
+      })
 
     val bindF = bootstrap.bind(bind)
 

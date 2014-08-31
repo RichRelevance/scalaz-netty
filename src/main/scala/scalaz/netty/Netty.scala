@@ -28,12 +28,12 @@ object Netty {
     }
   }
 
-  private[netty] def toTask(f: ChannelFuture): Task[Unit] = {
+  private[netty] def toTask(f: ChannelFuture): Task[Unit] = Task fork {
     Task async { (cb: (Throwable \/ Unit) => Unit) =>
       f.addListener(new ChannelFutureListener {
         def operationComplete(f: ChannelFuture): Unit = {
           if (f.isSuccess)
-            cb(\/-(f.get))
+            cb(\/-(()))
           else
             cb(-\/(f.cause))
         }
