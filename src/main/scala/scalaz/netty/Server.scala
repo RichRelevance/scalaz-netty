@@ -28,7 +28,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =
   def listen: Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] =
     queue.dequeue
 
-  def shutdown: Task[Unit] = {
+  def shutdown(implicit pool: ExecutorService): Task[Unit] = {
     for {
       _ <- Netty toTask channel.close()
       _ <- queue.close
@@ -39,7 +39,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =
     } yield ()
   }
 
-  private final class Handler(channel: SocketChannel) extends ChannelInboundHandlerAdapter {
+  private final class Handler(channel: SocketChannel)(implicit pool: ExecutorService) extends ChannelInboundHandlerAdapter {
 
     // data from a single connection
     private val queue = async.boundedQueue[ByteVector](limit)
@@ -106,7 +106,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =
 }
 
 private[netty] object Server {
-  def apply(bind: InetSocketAddress, config: ServerConfig): Task[Server] = Task delay {
+  def apply(bind: InetSocketAddress, config: ServerConfig)(implicit pool: ExecutorService): Task[Server] = Task delay {
     val bossGroup = new NioEventLoopGroup(config.numThreads)
 
     val server = new Server(bossGroup, config.limit)

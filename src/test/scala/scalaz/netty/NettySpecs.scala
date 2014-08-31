@@ -18,7 +18,7 @@ import java.util.concurrent.{Executors, ThreadFactory}
 
 object NettySpecs extends Specification with NoTimeConversions {
 
-  implicit val scheduler = {
+  val scheduler = {
     Executors.newScheduledThreadPool(4, new ThreadFactory {
       def newThread(r: Runnable) = {
         val t = Executors.defaultThreadFactory.newThread(r)
@@ -57,7 +57,8 @@ object NettySpecs extends Specification with NoTimeConversions {
         Process.eval(initiate.run >> check).drain
       }
 
-      Nondeterminism[Task].both(Task fork server.run, Task fork (Process sleep (200 millis) fby client).run).run
+      val delay = Process.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
+      Nondeterminism[Task].both(Task fork server.run, Task fork (delay fby client).run).run
 
       ok
     }

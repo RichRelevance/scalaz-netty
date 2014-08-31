@@ -7,15 +7,11 @@ import stream._
 import scodec.bits.ByteVector
 
 import java.net.InetSocketAddress
-import java.util.concurrent.ThreadFactory
+import java.util.concurrent.{ExecutorService, ThreadFactory}
 
 import _root_.io.netty.channel._
 import _root_.io.netty.channel.nio.NioEventLoopGroup
 
-/**
- * It is highly advisable to fork the resulting tasks out of this thread pool
- * if you are planning on doing any non-trivial computation with the data retrieved.
- */
 object Netty {
 
   private[netty] lazy val workerGroup = new NioEventLoopGroup(1, new ThreadFactory {
@@ -28,19 +24,19 @@ object Netty {
     }
   })
 
-  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
+  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
     Process.await(Server(bind, config)) { server: Server =>
       server.listen onComplete Process.eval(server.shutdown).drain
     }
   }
 
-  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default): Process[Task, Exchange[ByteVector, ByteVector]] = {
+  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService): Process[Task, Exchange[ByteVector, ByteVector]] = {
     Process.await(Client(to, config)) { client: Client =>
       Process(Exchange(client.read, client.write)) onComplete Process.eval(client.shutdown).drain
     }
   }
 
-  private[netty] def toTask(f: ChannelFuture): Task[Unit] = Task fork {
+  private[netty] def toTask(f: ChannelFuture)(implicit pool: ExecutorService): Task[Unit] = Task fork {
     Task async { (cb: (Throwable \/ Unit) => Unit) =>
       f.addListener(new ChannelFutureListener {
         def operationComplete(f: ChannelFuture): Unit = {

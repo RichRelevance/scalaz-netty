@@ -45,8 +45,5 @@ This hard-relies on scalaz-stream 0.5 and will not work on earlier versions, mos
 
 ## Future Work
 
-- Thread pools are currently not shared.
 - Byte buffers are copied upon receipt.  The only way to *safely* address this problem will be to integrate with Scodec and decode against the directly allocated byte buffers.  Not hard to do, really...
-- Frame coding is currently not configurable.  This makes it a lot simpler, but technically also much less flexible.
 - Exceptions probably don't propagate properly under all circumstances.
-- `Task` thread pool is not configurable (currently uses the default scalaz-concurrent pool for everything)

@@ -26,7 +26,7 @@ private[netty] final class Client(limit: Int) {
 
   def read: Process[Task, ByteVector] = queue.dequeue
 
-  def write: Sink[Task, ByteVector] = {
+  def write(implicit pool: ExecutorService): Sink[Task, ByteVector] = {
     def inner(bv: ByteVector): Task[Unit] = {
       Task delay {
         val data = bv.toArray
@@ -41,7 +41,7 @@ private[netty] final class Client(limit: Int) {
     Process constant (inner _)
   }
 
-  def shutdown: Task[Unit] = {
+  def shutdown(implicit pool: ExecutorService): Task[Unit] = {
     for {
       _ <- Netty toTask channel.close()
       _ <- queue.close
@@ -75,7 +75,7 @@ private[netty] final class Client(limit: Int) {
 }
 
 private[netty] object Client {
-  def apply(to: InetSocketAddress, config: ClientConfig): Task[Client] = Task delay {
+  def apply(to: InetSocketAddress, config: ClientConfig)(implicit pool: ExecutorService): Task[Client] = Task delay {
     val client = new Client(config.limit)
     val bootstrap = new Bootstrap
 
