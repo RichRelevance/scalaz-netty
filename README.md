@@ -14,7 +14,7 @@ def log(msg: String): Task[Unit] = ???
 
 val address = new InetSocketAddress("localhost", 9090)
 
-val EchoServer = Netty server address flatMap {
+val EchoServer = merge.mergeN(Netty server address map {
   case (addr, incoming) => {
     incoming flatMap { exchange =>
       for {
@@ -23,7 +23,7 @@ val EchoServer = Netty server address flatMap {
       } yield ()
     }
   }
-}
+})
 
 /*
  * A simple client which sends ByteVector(1, 2, 3) to the server,
