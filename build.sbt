@@ -21,3 +21,9 @@ libraryDependencies ++= Seq(
 libraryDependencies ++= Seq(
   "org.specs2"     %% "specs2"     % "2.4.2" % "test",
   "org.scalacheck" %% "scalacheck" % "1.11.5" % "test")
+
+publishTo := Some(
+  if (version.value.trim.endsWith("SNAPSHOT"))
+    "RR Snapshots Nexus" at "https://repo.richrelevance.com/content/repositories/inhouse.snapshots/"
+  else
+    "RR Release Nexus" at "https://repo.richrelevance.com/content/repositories/inhouse/")
