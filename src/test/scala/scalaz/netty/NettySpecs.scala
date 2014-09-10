@@ -64,5 +64,17 @@ object NettySpecs extends Specification with NoTimeConversions {
 
       ok
     }
+
+    "terminate a client process with an error if connection failed" in {
+      val addr = new InetSocketAddress("localhost", 51235)         // hopefully no one is using this port...
+
+      val client = Netty connect addr map { _ => () }
+
+      val result = client.run.attempt.run
+
+      result must beLike {
+        case -\/(_) => ok
+      }
+    }
   }
 }
