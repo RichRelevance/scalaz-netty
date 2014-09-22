@@ -18,6 +18,8 @@ import java.util.concurrent.{Executors, ThreadFactory}
 
 object NettySpecs extends Specification with NoTimeConversions {
 
+  sequential
+
   val scheduler = {
     Executors.newScheduledThreadPool(4, new ThreadFactory {
       def newThread(r: Runnable) = {
