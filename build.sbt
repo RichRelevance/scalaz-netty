@@ -12,7 +12,7 @@ resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"   % "7.1.0",
-  "org.scalaz.stream" %% "scalaz-stream" % "0.5a",
+  "org.scalaz.stream" %% "scalaz-stream" % "0.6a",
   //
   "io.netty"          %  "netty-codec"   % "4.0.21.Final",
   //
