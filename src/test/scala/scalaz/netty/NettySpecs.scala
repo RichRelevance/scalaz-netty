@@ -78,5 +78,17 @@ object NettySpecs extends Specification with NoTimeConversions {
         case -\/(_) => ok
       }
     }
+
+    "terminate a client process if connection times out" in {
+      val addr = new InetSocketAddress("100.64.0.1", 51234)        // reserved IP, very weird port
+
+      val client = Netty connect addr map { _ => () }
+
+      val result = client.run.attempt.run
+
+      result must eventually(beLike[Throwable \/ Unit] {
+        case -\/(_) => ok
+      })
+    }
   }
 }
