@@ -19,8 +19,8 @@ libraryDependencies ++= Seq(
   "org.typelevel"     %% "scodec-core"   % "1.3.0")
 
 libraryDependencies ++= Seq(
-  "org.specs2"     %% "specs2"     % "2.4.2" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.11.5" % "test")
+  "org.specs2"     %% "specs2"     % "2.4.14" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.12.0" % "test")
 
 publishTo := Some(
   if (version.value.trim.endsWith("SNAPSHOT"))
