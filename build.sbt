@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.specs2"     %% "specs2"     % "2.4.14" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.12.0" % "test")
+  "org.scalacheck" %% "scalacheck" % "1.12.1" % "test")
 
 publishTo := Some(
   if (version.value.trim.endsWith("SNAPSHOT"))
