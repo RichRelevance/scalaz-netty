@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   //
   "io.netty"          %  "netty-codec"   % "4.0.21.Final",
   //
-  "org.typelevel"     %% "scodec-core"   % "1.5.0")
+  "org.typelevel"     %% "scodec-core"   % "1.6.0")
 
 libraryDependencies ++= Seq(
   "org.specs2"     %% "specs2"     % "2.4.14" % "test",
