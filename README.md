@@ -14,14 +14,13 @@ def log(msg: String): Task[Unit] = ???
 
 val address = new InetSocketAddress("localhost", 9090)
 
-val EchoServer = merge.mergeN(Netty server address map {
+val EchoServer = merge.mergeN(Netty server address map { incoming =>
   case (addr, incoming) => {
-    incoming flatMap { exchange =>
-      for {
-        _ <- Process.eval(log(s"accepted connection from $addr"))
-        _ <- exchange.read to exchange.write
-      } yield ()
-    }
+    for {
+      exchange <- incoming
+      _ <- Process.eval(log(s"accepted connection from $addr"))
+      _ <- exchange.read to exchange.write
+    } yield ()
   }
 })
 
@@ -38,10 +37,6 @@ val DumbClient = Netty client address flatMap { exchange =>
   } yield ()
 }
 ```
-
-## Requirements
-
-This hard-relies on scalaz-stream 0.5 and will not work on earlier versions, mostly because earlier versions are very buggy in some important ways.
 
 ## Future Work
 
