@@ -1,4 +1,7 @@
-organization := "org.scalaz"
+import com.typesafe.sbt.SbtGit._
+import bintray.Keys._
+
+organization := "org.scalaz.netty"
 
 name := "scalaz-netty"
 
@@ -13,17 +16,17 @@ resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"   % "7.1.0",
   "org.scalaz.stream" %% "scalaz-stream" % "0.6a",
-  //
+
   "io.netty"          %  "netty-codec"   % "4.0.21.Final",
-  //
+
   "org.typelevel"     %% "scodec-core"   % "1.6.0")
 
 libraryDependencies ++= Seq(
   "org.specs2"     %% "specs2"     % "2.4.14" % "test",
   "org.scalacheck" %% "scalacheck" % "1.12.1" % "test")
 
-publishTo := Some(
-  if (version.value.trim.endsWith("SNAPSHOT"))
-    "RR Snapshots Nexus" at "https://repo.richrelevance.com/content/repositories/inhouse.snapshots/"
-  else
-    "RR Release Nexus" at "https://repo.richrelevance.com/content/repositories/inhouse/")
+publishMavenStyle := true
+
+bintraySettings
+
+bintrayOrganization in bintray := Some("rr")
