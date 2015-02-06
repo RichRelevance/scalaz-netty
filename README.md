@@ -47,3 +47,7 @@ This hard-relies on scalaz-stream 0.5 and will not work on earlier versions, mos
 
 - Byte buffers are copied upon receipt.  The only way to *safely* address this problem will be to integrate with Scodec and decode against the directly allocated byte buffers.  Not hard to do, really...
 - Exceptions probably don't propagate properly under all circumstances.
+
+## License
+
+Licensed under the Apache License 2.0.  For more information, please see `LICENSE.txt`.  Opening a pull request signifies your consent to license your contributions under the Apache License 2.0.  Don't open a pull request if you don't know what this means.
