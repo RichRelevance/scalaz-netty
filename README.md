@@ -3,7 +3,32 @@
 [![Build Status](https://travis-ci.org/RichRelevance/scalaz-netty.svg?branch=master)](http://travis-ci.org/RichRelevance/scalaz-netty)
 [![Gitter Chat](https://badges.gitter.im/RichRelevance/scalaz-netty.svg)](https://gitter.im/RichRelevance/scalaz-netty)
 
-Some basic usage below:
+## Getting Started
+
+First, you'll need to add the RichRelevance and Scalaz Bintray resolver settings to your SBT file:
+
+```sbt
+resolvers ++= Seq(
+  "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases",
+  "RichRelevance Bintray" at "http://dl.bintray.com/rr/releases")
+```
+
+If you want to be able to use snapshot releases, replace `releases` with `snapshots`.  With the resolver configured, add the following dependency specification:
+
+```sbt
+libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.1.5"
+```
+
+Cross builds are published for Scala 2.10.4 and 2.11.5.  The latest stable release is **0.1.5**.  The upstream dependencies for this project include the following:
+
+- scalaz 7.1.0
+- scalaz-stream 0.6a
+- scodec-core 1.6.0
+- netty 4.1.21.Final
+
+Snapshot releases follow the version scheme `master-<sha1>`, where the "`sha1`" component is the Git commit that was snapshotted.  Not all commits will have corresponding snapshot releases.  You can browse the list of snapshot releases [on bintray](https://bintray.com/rr/snapshots/scalaz-netty/view).
+
+## Example
 
 ```scala
 import scalaz.netty._
