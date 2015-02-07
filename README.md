@@ -1,5 +1,8 @@
 # scalaz-netty
 
+[![Build Status](https://travis-ci.org/RichRelevance/scalaz-netty.svg?branch=master)](http://travis-ci.org/RichRelevance/scalaz-netty)
+[![Gitter Chat](https://badges.gitter.im/RichRelevance/scalaz-netty.svg)](https://gitter.im/RichRelevance/scalaz-netty)
+
 Some basic usage below:
 
 ```scala
