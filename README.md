@@ -1,5 +1,7 @@
 # scalaz-netty
 
+[![Join the chat at https://gitter.im/RichRelevance/scalaz-netty](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/RichRelevance/scalaz-netty?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Build Status](https://travis-ci.org/RichRelevance/scalaz-netty.svg?branch=master)](http://travis-ci.org/RichRelevance/scalaz-netty)
 [![Gitter Chat](https://badges.gitter.im/RichRelevance/scalaz-netty.svg)](https://gitter.im/RichRelevance/scalaz-netty)
 
