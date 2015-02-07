@@ -50,3 +50,5 @@ git.baseVersion := "master"
 bintraySettings
 
 bintrayOrganization in bintray := Some("rr")
+
+repository in bintray := (if (version.value startsWith "master") "snapshots" else "releases")
