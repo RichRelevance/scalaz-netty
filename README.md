@@ -61,7 +61,7 @@ val EchoServer = merge.mergeN(Netty server address map {
  * prints its response and then shuts down.
  */
 
-val Client = Netty connect address flatMap { exchange =>
+val BasicClient = Netty connect address flatMap { exchange =>
   for {
     _ <- Process(ByteVector(1, 2, 3)) to exchange.write
     data <- exchange.read take 1
@@ -69,11 +69,9 @@ val Client = Netty connect address flatMap { exchange =>
   } yield ()
 }
 
-/*
- * Usage:
- * scala> EchoServer.run.runAsync(_ => ())  // press Enter when this completes to acquire new prompt
- * scala> Client.run.run
- */
+// Usage:
+// scala> EchoServer.run.runAsync(_ => ())  // press Enter when this completes to acquire new prompt
+// scala> BasicClient.run.run
 ```
 
 ## Future Work
