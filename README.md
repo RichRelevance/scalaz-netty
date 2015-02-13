@@ -32,17 +32,21 @@ Snapshot releases follow the version scheme `master-<sha1>`, where the "`sha1`" 
 
 ```scala
 import scalaz.netty._
+import scalaz.stream._
+import scalaz.concurrent._
+import java.net.InetSocketAddress
+import scodec.bits.ByteVector
 
 /*
  * A simple server which accepts a connection, echos the incoming
  * data back to the sender, waiting for the client to close the connection.
  */
 
-def log(msg: String): Task[Unit] = ???
+def log(msg: String): Task[Unit] = Task.delay(println(s"$msg"))
 
 val address = new InetSocketAddress("localhost", 9090)
 
-val EchoServer = merge.mergeN(Netty server address map { incoming =>
+val EchoServer = merge.mergeN(Netty server address map {
   case (addr, incoming) => {
     for {
       exchange <- incoming
@@ -57,13 +61,19 @@ val EchoServer = merge.mergeN(Netty server address map { incoming =>
  * prints its response and then shuts down.
  */
 
-val DumbClient = Netty client address flatMap { exchange =>
+val Client = Netty connect address flatMap { exchange =>
   for {
     _ <- Process(ByteVector(1, 2, 3)) to exchange.write
     data <- exchange.read take 1
     _ <- Process.eval(log(s"received data = $data"))
   } yield ()
 }
+
+/*
+ * Usage:
+ * scala> EchoServer.run.runAsync(_ => ())  // press Enter when this completes to acquire new prompt
+ * scala> Client.run.run
+ */
 ```
 
 ## Future Work
