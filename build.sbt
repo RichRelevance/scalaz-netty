@@ -37,7 +37,7 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.specs2"     %% "specs2-core" % "3.0"    % "test",
-  "org.scalacheck" %% "scalacheck"  % "1.12.1" % "test")
+  "org.scalacheck" %% "scalacheck"  % "1.12.2" % "test")
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/"))
 
