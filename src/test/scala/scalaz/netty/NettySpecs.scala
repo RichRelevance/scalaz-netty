@@ -26,13 +26,13 @@ import scodec.bits._
 import scala.concurrent.duration._
 
 import org.specs2.mutable._
-import org.specs2.time.NoTimeConversions
+
 import org.scalacheck._
 
 import java.net.InetSocketAddress
 import java.util.concurrent.{Executors, ThreadFactory}
 
-object NettySpecs extends Specification with NoTimeConversions {
+object NettySpecs extends Specification {
 
   sequential
 
