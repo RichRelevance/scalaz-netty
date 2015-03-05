@@ -62,8 +62,7 @@ object NettySpecs extends Specification {
       val client = Netty connect addr flatMap { exchange =>
         val data = ByteVector(12, 42, 1)
 
-        // type annotation required because of a bug in Scala 2.10.4
-        val initiate = (Process(data): Process[Task, ByteVector]) to exchange.write
+        val initiate = Process(data) to exchange.write
 
         val check = for {
           results <- exchange.read.runLog
