@@ -23,6 +23,8 @@ name := "scalaz-netty"
 
 scalaVersion := "2.11.6"
 
+crossScalaVersions := Seq(scalaVersion.value)
+
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
