@@ -21,7 +21,7 @@ organization := "org.scalaz.netty"
 
 name := "scalaz-netty"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
