@@ -24,7 +24,7 @@ Builds are published for Scala 2.11.6.  The latest stable release is **0.1.7**. 
 - scalaz 7.1.0
 - scalaz-stream 0.6a
 - scodec-core 1.7.1
-- netty 4.1.21.Final
+- netty 4.0.21.Final
 
 Snapshot releases follow the version scheme `master-<sha1>`, where the "`sha1`" component is the Git commit that was snapshotted.  Not all commits will have corresponding snapshot releases.  You can browse the list of snapshot releases [on bintray](https://bintray.com/rr/snapshots/scalaz-netty/view).
 
