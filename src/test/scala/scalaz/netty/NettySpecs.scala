@@ -76,7 +76,7 @@ object NettySpecs extends Specification {
         Process.eval(initiate.run >> check).drain
       }
 
-      val delay = Process.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
+      val delay = time.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
       Nondeterminism[Task].both(Task fork server.run, Task fork (delay fby client).run).run
 
       ok
