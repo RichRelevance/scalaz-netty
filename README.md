@@ -16,13 +16,13 @@ resolvers ++= Seq(
 If you want to be able to use snapshot releases, replace `releases` with `snapshots`.  With the resolver configured, add the following dependency specification:
 
 ```sbt
-libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.1.7"
+libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.1.8"
 ```
 
-Builds are published for Scala 2.11.6.  The latest stable release is **0.1.7**.  The upstream dependencies for this project include the following:
+Builds are published for Scala 2.11.6.  The latest stable release is **0.1.8**.  The upstream dependencies for this project include the following:
 
 - scalaz 7.1.0
-- scalaz-stream 0.6a
+- scalaz-stream 0.7a
 - scodec-core 1.7.1
 - netty 4.0.21.Final
 
