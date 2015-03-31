@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
   "org.scodec"        %% "scodec-core"   % "1.7.1")
 
 libraryDependencies ++= Seq(
-  "org.specs2"     %% "specs2-core" % "3.2"    % "test",
+  "org.specs2"     %% "specs2-core" % "3.3"    % "test",
   "org.scalacheck" %% "scalacheck"  % "1.12.2" % "test")
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/"))
