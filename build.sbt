@@ -28,7 +28,7 @@ crossScalaVersions := Seq(scalaVersion.value)
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
-  "org.scalaz"        %% "scalaz-core"   % "7.1.0",
+  "org.scalaz"        %% "scalaz-core"   % "7.1.1",
   "org.scalaz.stream" %% "scalaz-stream" % "0.7a",
 
   "io.netty"          %  "netty-codec"   % "4.0.21.Final",
