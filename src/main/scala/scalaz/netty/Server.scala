@@ -36,6 +36,7 @@ import _root_.io.netty.handler.codec._
 
 private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =>
   // this isn't ugly or anything...
+  @volatile
   private var channel: _root_.io.netty.channel.Channel = _
 
   // represents incoming connections
