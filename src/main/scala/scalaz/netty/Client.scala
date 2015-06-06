@@ -36,6 +36,7 @@ import _root_.io.netty.handler.codec._
 
 private[netty] final class Client(limit: Int) {
   // this isn't ugly or anything...
+  @volatile
   private var channel: _root_.io.netty.channel.Channel = _
 
   private val queue = async.boundedQueue[ByteVector](limit)
