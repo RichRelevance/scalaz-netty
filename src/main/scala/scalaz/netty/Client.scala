@@ -76,7 +76,10 @@ private[netty] final class Client(limit: Int) {
 
     override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
       val buf = msg.asInstanceOf[ByteBuf]
-      val bv = ByteVector.view(buf.nioBuffer)       // copy data (alternatives are insanely clunky)
+      val dst = Array.ofDim[Byte](buf.capacity())
+      buf.getBytes(0, dst)
+      val bv = ByteVector(dst) // copy data (alternatives are insanely clunky)
+
       buf.release()
 
       // because this is run and not runAsync, we have backpressure propagation
