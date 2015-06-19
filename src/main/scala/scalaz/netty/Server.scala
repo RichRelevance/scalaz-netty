@@ -85,7 +85,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =
       val dst = Array.ofDim[Byte](buf.capacity())
       buf.getBytes(0, dst)
       
-      val bv = ByteVector(dst)
+      val bv = ByteVector.view(dst)
       
       // use a view to avoid coping the buf
       // should be safe since there'd be no chance msg gets modified later

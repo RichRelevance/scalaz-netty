@@ -78,7 +78,7 @@ private[netty] final class Client(limit: Int) {
       val buf = msg.asInstanceOf[ByteBuf]
       val dst = Array.ofDim[Byte](buf.capacity())
       buf.getBytes(0, dst)
-      val bv = ByteVector(dst) // copy data (alternatives are insanely clunky)
+      val bv = ByteVector.view(dst) // copy data (alternatives are insanely clunky)
 
       buf.release()
 
