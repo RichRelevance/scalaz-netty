@@ -87,9 +87,6 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, limit: Int) { server =
       
       val bv = ByteVector.view(dst)
       
-      // use a view to avoid coping the buf
-      // should be safe since there'd be no chance msg gets modified later
-//      val bv = ByteVector.view(buf.nioBuffer)       // copy data (alternatives are insanely clunky)
       buf.release()
 
       // because this is run and not runAsync, we have backpressure propagation
