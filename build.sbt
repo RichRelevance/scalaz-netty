@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"   % "7.1.2",
   "org.scalaz.stream" %% "scalaz-stream" % "0.7.1a",
 
-  "io.netty"          %  "netty-codec"   % "4.0.21.Final",
+  "io.netty"          %  "netty-codec"   % "4.0.29.Final",
 
   "org.scodec"        %% "scodec-core"   % "1.7.1")
 
