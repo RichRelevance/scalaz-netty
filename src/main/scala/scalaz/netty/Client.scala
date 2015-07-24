@@ -34,11 +34,7 @@ import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] final class Client(limit: Int) {
-  // this isn't ugly or anything...
-  private var channel: _root_.io.netty.channel.Channel = _
-
-  private val queue = async.boundedQueue[ByteVector](limit)
+private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[ByteVector]) {
 
   def read: Process[Task, ByteVector] = queue.dequeue
 
@@ -63,38 +59,43 @@ private[netty] final class Client(limit: Int) {
       _ <- queue.close
     } yield ()
   }
+}
 
-  private final class Handler extends ChannelInboundHandlerAdapter {
+private[netty] final class ClientHandler(queue: async.mutable.Queue[ByteVector]) extends ChannelInboundHandlerAdapter {
 
-    override def channelInactive(ctx: ChannelHandlerContext): Unit = {
-      // if the connection is remotely closed, we need to clean things up on our side
-      queue.close.run
+  override def channelInactive(ctx: ChannelHandlerContext): Unit = {
+    // if the connection is remotely closed, we need to clean things up on our side
+    queue.close.run
 
-      super.channelInactive(ctx)
-    }
+    super.channelInactive(ctx)
+  }
 
-    override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
-      val buf = msg.asInstanceOf[ByteBuf]
-      val bv = ByteVector(buf.nioBuffer)       // copy data (alternatives are insanely clunky)
-      buf.release()
+  override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
+    val buf = msg.asInstanceOf[ByteBuf]
+    val dst = Array.ofDim[Byte](buf.capacity())
+    buf.getBytes(0, dst)
+    val bv = ByteVector.view(dst) 
+    
+    buf.release()
 
-      // because this is run and not runAsync, we have backpressure propagation
-      queue.enqueueOne(bv).run
-    }
+    // because this is run and not runAsync, we have backpressure propagation
+    queue.enqueueOne(bv).run
+  }
 
-    override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
-      queue.fail(t).run
+  override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
+    queue.fail(t).run
 
-      // super.exceptionCaught(ctx, t)
-    }
+    // super.exceptionCaught(ctx, t)
   }
 }
 
 private[netty] object Client {
   def apply(to: InetSocketAddress, config: ClientConfig)(implicit pool: ExecutorService): Task[Client] = Task delay {
-    val client = new Client(config.limit)
+    //val client = new Client(config.limit)
     val bootstrap = new Bootstrap
 
+    val queue = async.boundedQueue[ByteVector](config.limit)
+    
     bootstrap.group(Netty.workerGroup)
     bootstrap.channel(classOf[NioSocketChannel])
 
@@ -105,7 +106,7 @@ private[netty] object Client {
         ch.pipeline
           .addLast("frame encoding", new LengthFieldPrepender(4))
           .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
-          .addLast("incoming handler", new client.Handler)
+          .addLast("incoming handler", new ClientHandler(queue))
       }
     })
 
@@ -113,8 +114,8 @@ private[netty] object Client {
 
     for {
       _ <- Netty toTask connectF
-      _ <- Task delay {
-        client.channel = connectF.channel()
+      client <- Task delay {
+        new Client(connectF.channel(), queue)
       }
     } yield client
   } join
