@@ -28,16 +28,16 @@ crossScalaVersions := Seq(scalaVersion.value)
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
-  "org.scalaz"        %% "scalaz-core"   % "7.1.2",
-  "org.scalaz.stream" %% "scalaz-stream" % "0.7.1a",
+  "org.scalaz"        %% "scalaz-core"   % "7.1.3",
+  "org.scalaz.stream" %% "scalaz-stream" % "0.7.2a",
 
-  "io.netty"          %  "netty-codec"   % "4.0.21.Final",
+  "io.netty"          %  "netty-codec"   % "4.0.29.Final",
 
-  "org.scodec"        %% "scodec-core"   % "1.7.1")
+  "org.scodec"        %% "scodec-core"   % "1.8.1")
 
 libraryDependencies ++= Seq(
-  "org.specs2"     %% "specs2-core" % "3.6.1"  % "test",
-  "org.scalacheck" %% "scalacheck"  % "1.12.2" % "test")
+  "org.specs2"     %% "specs2-core" % "3.6.2"  % "test",
+  "org.scalacheck" %% "scalacheck"  % "1.12.4" % "test")
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/"))
 
