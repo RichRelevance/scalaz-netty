@@ -21,7 +21,7 @@ organization := "org.scalaz.netty"
 
 name := "scalaz-netty"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 crossScalaVersions := Seq(scalaVersion.value)
 
