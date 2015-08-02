@@ -88,13 +88,13 @@ object NettySpecs extends Specification {
     "round trip some simple data to ten simultaneous clients" in {
       val addr = new InetSocketAddress("localhost", 9090)
 
-      val server = Netty server addr flatMap {
+      val server = merge.mergeN(Netty server addr map {
         case (_, incoming) => {
           incoming flatMap { exchange =>
             exchange.read take 1 to exchange.write drain
           }
         }
-      }
+      })
 
       def client(n: Int) = Netty connect addr flatMap { exchange =>
         val data = ByteVector(n)
