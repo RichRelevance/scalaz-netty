@@ -51,10 +51,10 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.net
   }
 }
 
-private[netty] final class ServerHandler(channel: SocketChannel, queue: async.mutable.Queue[ByteVector], serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])])(implicit pool: ExecutorService) extends ChannelInboundHandlerAdapter {
+private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService) extends ChannelInboundHandlerAdapter {
 
   // data from a single connection
-  //private val queue = async.boundedQueue[ByteVector](limit)
+  private val queue = async.boundedQueue[ByteVector](limit)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
@@ -79,9 +79,9 @@ private[netty] final class ServerHandler(channel: SocketChannel, queue: async.mu
     val buf = msg.asInstanceOf[ByteBuf]
     val dst = Array.ofDim[Byte](buf.capacity())
     buf.getBytes(0, dst)
-    
+
     val bv = ByteVector.view(dst)
-    
+
     buf.release()
 
     // because this is run and not runAsync, we have backpressure propagation
@@ -126,10 +126,9 @@ private[netty] object Server {
 
     //val server = new Server(bossGroup, config.limit)
     val bootstrap = new ServerBootstrap
-    
+
     val serverQueue = async.boundedQueue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])](config.limit)
-    val handlerQueue = async.boundedQueue[ByteVector](config.limit)
-    
+
     bootstrap.group(bossGroup, Netty.workerGroup)
       .channel(classOf[NioServerSocketChannel])
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
@@ -141,7 +140,7 @@ private[netty] object Server {
               .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
           }
 
-          ch.pipeline.addLast("incoming handler", new ServerHandler(ch, handlerQueue, serverQueue))
+          ch.pipeline.addLast("incoming handler", new ServerHandler(ch, serverQueue, config.limit))
         }
       })
 

@@ -65,7 +65,7 @@ object NettySpecs extends Specification {
         val initiate = Process(data) to exchange.write
 
         val check = for {
-          results <- exchange.read.runLog
+          results <- exchange.read.runLog timed (5 seconds)
 
           _ <- Task delay {
             results must haveSize(1)
@@ -77,9 +77,43 @@ object NettySpecs extends Specification {
       }
 
       val delay = time.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
-      Nondeterminism[Task].both(Task fork server.run, Task fork (delay fby client).run).run
+
+      val test = server.drain merge (delay ++ client)
+
+      test.run timed (15 seconds) run
 
       ok
+    }
+
+    "round trip some simple data to ten simultaneous clients" in {
+      val addr = new InetSocketAddress("localhost", 9090)
+
+      val server = Netty server addr flatMap {
+        case (_, incoming) => {
+          incoming flatMap { exchange =>
+            exchange.read take 1 to exchange.write drain
+          }
+        }
+      }
+
+      def client(n: Int) = Netty connect addr flatMap { exchange =>
+        val data = ByteVector(n)
+
+        for {
+          _ <- Process(data) to exchange.write
+          results <- Process eval (exchange.read.runLog timed (5 seconds))
+          bv <- Process emitAll results
+        } yield (n -> bv)
+      }
+
+      val delay = time.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
+
+      val test = (server.drain wye merge.mergeN(Process.range(0, 10) map { n => delay ++ client(n) }))(wye.mergeHaltBoth)
+
+      val results = test.runLog timed (15 seconds) run
+
+      results must haveSize(10)
+      results must containAllOf(0 until 10 map { n => n -> ByteVector(n) })
     }
 
     "terminate a client process with an error if connection failed" in {
