@@ -23,7 +23,7 @@ name := "scalaz-netty"
 
 scalaVersion := "2.11.7"
 
-crossScalaVersions := Seq(scalaVersion.value)
+crossScalaVersions := Seq(scalaVersion.value, "2.12.0-M2")
 
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
@@ -33,10 +33,10 @@ libraryDependencies ++= Seq(
 
   "io.netty"          %  "netty-codec"   % "4.0.29.Final",
 
-  "org.scodec"        %% "scodec-core"   % "1.8.1")
+  "org.scodec"        %% "scodec-bits"   % "1.0.9")
 
 libraryDependencies ++= Seq(
-  "org.specs2"     %% "specs2-core" % "3.6.2"  % "test",
+  "org.specs2"     %% "specs2-core" % "3.6.4"  % "test",
   "org.scalacheck" %% "scalacheck"  % "1.12.4" % "test")
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/"))
