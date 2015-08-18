@@ -40,13 +40,13 @@ object Netty {
     }
   })
 
-  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
+  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
     Process.await(Server(bind, config)) { server: Server =>
       server.listen onComplete Process.eval(server.shutdown).drain
     }
   }
 
-  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService): Process[Task, Exchange[ByteVector, ByteVector]] = {
+  def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Exchange[ByteVector, ByteVector]] = {
     Process.await(Client(to, config)) { client: Client =>
       Process(Exchange(client.read, client.write)) onComplete Process.eval(client.shutdown).drain
     }
