@@ -51,7 +51,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.net
   }
 }
 
-private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService) extends ChannelInboundHandlerAdapter {
+private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService, S: Strategy) extends ChannelInboundHandlerAdapter {
 
   private val channelConfig = channel.config
 
@@ -124,7 +124,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
 }
 
 private[netty] object Server {
-  def apply(bind: InetSocketAddress, config: ServerConfig)(implicit pool: ExecutorService): Task[Server] = Task delay {
+  def apply(bind: InetSocketAddress, config: ServerConfig)(implicit pool: ExecutorService, S: Strategy): Task[Server] = Task delay {
     val bossGroup = new NioEventLoopGroup(config.numThreads)
 
     //val server = new Server(bossGroup, config.limit)

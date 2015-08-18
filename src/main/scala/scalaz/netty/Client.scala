@@ -90,7 +90,7 @@ private[netty] final class ClientHandler(queue: BPAwareQueue[ByteVector]) extend
 }
 
 private[netty] object Client {
-  def apply(to: InetSocketAddress, config: ClientConfig)(implicit pool: ExecutorService): Task[Client] = Task delay {
+  def apply(to: InetSocketAddress, config: ClientConfig)(implicit pool: ExecutorService, S: Strategy): Task[Client] = Task delay {
     //val client = new Client(config.limit)
     val bootstrap = new Bootstrap
 
