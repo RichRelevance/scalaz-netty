@@ -96,7 +96,7 @@ private[netty] object Client {
 
     val queue = async.boundedQueue[ByteVector](config.limit)
     
-    bootstrap.group(Netty.workerGroup)
+    bootstrap.group(Netty.clientWorkerGroup)
     bootstrap.channel(classOf[NioSocketChannel])
 
     bootstrap.option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)

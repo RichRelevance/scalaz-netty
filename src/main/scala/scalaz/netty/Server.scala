@@ -129,7 +129,7 @@ private[netty] object Server {
 
     val serverQueue = async.boundedQueue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])](config.limit)
 
-    bootstrap.group(bossGroup, Netty.workerGroup)
+    bootstrap.group(bossGroup, Netty.serverWorkerGroup)
       .channel(classOf[NioServerSocketChannel])
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
       .childHandler(new ChannelInitializer[SocketChannel] {
