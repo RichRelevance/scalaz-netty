@@ -139,5 +139,114 @@ object NettySpecs extends Specification {
         case -\/(_) => ok
       })
     }
+
+    def roundTripTest(noOfPackets: Int,
+                      clientBpQueueLimit: Int,
+                      serverBpQueueLimit: Int,
+                      clientSendSpeed: Int, // messages per second
+                      clientReceiveSpeed: Int, // messages per second
+                      serverSendSpeed: Int, // messages per second
+                      serverReceiveSpeed: Int // messages per second
+                       ) = {
+
+      val addr = new InetSocketAddress("localhost", 9090)
+      val data = ByteVector(0xDE, 0xAD, 0xBE, 0xEF)
+
+      val clientReceiveClock = time.awakeEvery((1000000 / clientReceiveSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+      val clientSendClock = time.awakeEvery((1000000 / clientSendSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+
+      val serverReceiveClock = time.awakeEvery((1000000 / serverReceiveSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+      val serverSendClock = time.awakeEvery((1000000 / serverSendSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+
+      val server = (Netty.server(addr,
+        ServerConfig(
+          keepAlive = true,
+          numThreads = Runtime.getRuntime.availableProcessors,
+          limit = serverBpQueueLimit,
+          codeFrames = true
+//          tcpNoDelay = true,
+//          soSndBuf = None,
+//          soRcvBuf = Some((data.size + 4) * serverBpQueueLimit)
+      ))) take 1 flatMap {
+        case (_, incoming) => {
+          incoming flatMap { exchange =>
+            exchange.read.zip(serverReceiveClock).map {
+              case (a, _) => a
+            }.take(noOfPackets).zip(serverSendClock).map {
+              case (a, _) => a
+            } to exchange.write drain
+          }
+        }
+      }
+
+      val client = Netty.connect(addr,
+        ClientConfig(
+          keepAlive = true,
+          limit = clientBpQueueLimit
+//          tcpNoDelay = true
+//          soSndBuf = None,
+//          soRcvBuf = Some((data.size + 4) * clientBpQueueLimit
+          ) // the +4 is because of LengthFieldPrepender
+        ).flatMap { exchange =>
+        val initiate = Process(data).repeat.take(noOfPackets).zip(clientSendClock).map {
+          case (a, _) => a
+        } to exchange.write
+
+        val check = for {
+          results <- exchange.read.zip(clientReceiveClock).map {
+            case (a, _) => a
+          }.runLog
+          _ <- Task delay {
+            results must haveSize(noOfPackets)
+          }
+        } yield ()
+
+        Process.eval_(for (_ <- initiate.run; last <- check) yield (()))
+
+      }
+
+      val test = server merge client
+
+      test.run timed ((5 + noOfPackets / Math.min(Math.min(serverReceiveSpeed, serverSendSpeed), Math.min(clientReceiveSpeed, clientSendSpeed))) seconds) run
+
+      ok
+    }
+
+    "round trip more data with slow client receive" in {
+      roundTripTest(
+        noOfPackets = 1000,
+        clientBpQueueLimit = 10,
+        serverBpQueueLimit = 1000,
+        clientSendSpeed = 10000,
+        clientReceiveSpeed = 200,
+        serverSendSpeed = 10000,
+        serverReceiveSpeed = 10000
+      )
+    }
+
+    "round trip more data with slow server receive" in {
+      roundTripTest(
+        noOfPackets = 1000,
+        clientBpQueueLimit = 10,
+        serverBpQueueLimit = 1000,
+        clientSendSpeed = 10000,
+        clientReceiveSpeed = 10000,
+        serverSendSpeed = 10000,
+        serverReceiveSpeed = 200
+      )
+    }
+
+    "round trip lots of data fast with small buffers" in {
+      roundTripTest(
+        noOfPackets = 10000,
+        clientBpQueueLimit = 10,
+        serverBpQueueLimit = 10,
+        clientSendSpeed = 10000,
+        clientReceiveSpeed = 10000,
+        serverSendSpeed = 10000,
+        serverReceiveSpeed = 10000
+      )
+    }
+
   }
 }

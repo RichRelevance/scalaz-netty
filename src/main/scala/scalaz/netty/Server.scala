@@ -53,8 +53,11 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.net
 
 private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService) extends ChannelInboundHandlerAdapter {
 
+  private val channelConfig = channel.config
+
   // data from a single connection
-  private val queue = async.boundedQueue[ByteVector](limit)
+  private val queue = BPAwareQueue[ByteVector](limit)
+
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
@@ -85,7 +88,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     buf.release()
 
     // because this is run and not runAsync, we have backpressure propagation
-    queue.enqueueOne(bv).run
+    queue.enqueueOne(channelConfig, bv).run
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
@@ -95,7 +98,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
   }
 
   // do not call more than once!
-  private def read: Process[Task, ByteVector] = queue.dequeue
+  private def read: Process[Task, ByteVector] = queue.dequeue(channelConfig)
 
   private def write: Sink[Task, ByteVector] = {
     def inner(bv: ByteVector): Task[Unit] = {
