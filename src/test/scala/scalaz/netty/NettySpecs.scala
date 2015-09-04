@@ -117,7 +117,7 @@ object NettySpecs extends Specification {
     }
 
     "terminate a client process with an error if connection failed" in {
-      val addr = new InetSocketAddress("localhost", 51235)         // hopefully no one is using this port...
+      val addr = new InetSocketAddress("localhost", 51235) // hopefully no one is using this port...
 
       val client = Netty connect addr map { _ => () }
 
@@ -129,7 +129,7 @@ object NettySpecs extends Specification {
     }
 
     "terminate a client process if connection times out" in {
-      val addr = new InetSocketAddress("100.64.0.1", 51234)        // reserved IP, very weird port
+      val addr = new InetSocketAddress("100.64.0.1", 51234) // reserved IP, very weird port
 
       val client = Netty connect addr map { _ => () }
 
@@ -146,11 +146,13 @@ object NettySpecs extends Specification {
                       clientSendSpeed: Int, // messages per second
                       clientReceiveSpeed: Int, // messages per second
                       serverSendSpeed: Int, // messages per second
-                      serverReceiveSpeed: Int // messages per second
+                      serverReceiveSpeed: Int, // messages per second
+                      dataMultiplier: Int = 1 // sizing the packet
                        ) = {
 
+      val deadbeef = ByteVector(0xDE, 0xAD, 0xBE, 0xEF) //4 bytes
       val addr = new InetSocketAddress("localhost", 9090)
-      val data = ByteVector(0xDE, 0xAD, 0xBE, 0xEF)
+      val data =  (1 to dataMultiplier).foldLeft(deadbeef)((a, counter) => a++deadbeef)
 
       val clientReceiveClock = time.awakeEvery((1000000 / clientReceiveSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
       val clientSendClock = time.awakeEvery((1000000 / clientSendSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
@@ -163,11 +165,11 @@ object NettySpecs extends Specification {
           keepAlive = true,
           numThreads = Runtime.getRuntime.availableProcessors,
           limit = serverBpQueueLimit,
-          codeFrames = true
-//          tcpNoDelay = true,
-//          soSndBuf = None,
-//          soRcvBuf = Some((data.size + 4) * serverBpQueueLimit)
-      ))) take 1 flatMap {
+          codeFrames = true,
+          tcpNoDelay = true,
+          soSndBuf = None,
+          soRcvBuf = None
+        ))) take 1 flatMap {
         case (_, incoming) => {
           incoming flatMap { exchange =>
             exchange.read.zip(serverReceiveClock).map {
@@ -182,12 +184,11 @@ object NettySpecs extends Specification {
       val client = Netty.connect(addr,
         ClientConfig(
           keepAlive = true,
-          limit = clientBpQueueLimit
-//          tcpNoDelay = true
-//          soSndBuf = None,
-//          soRcvBuf = Some((data.size + 4) * clientBpQueueLimit
-          ) // the +4 is because of LengthFieldPrepender
-        ).flatMap { exchange =>
+          limit = clientBpQueueLimit,
+          tcpNoDelay = true,
+          soSndBuf = None,
+          soRcvBuf = None)
+      ).flatMap { exchange =>
         val initiate = Process(data).repeat.take(noOfPackets).zip(clientSendClock).map {
           case (a, _) => a
         } to exchange.write
@@ -202,7 +203,6 @@ object NettySpecs extends Specification {
         } yield ()
 
         Process.eval_(for (_ <- initiate.run; last <- check) yield (()))
-
       }
 
       val test = server merge client
@@ -245,6 +245,19 @@ object NettySpecs extends Specification {
         clientReceiveSpeed = 10000,
         serverSendSpeed = 10000,
         serverReceiveSpeed = 10000
+      )
+    }
+
+    "round trip some huge packets" in {
+      roundTripTest(
+        noOfPackets = 10,
+        clientBpQueueLimit = 10,
+        serverBpQueueLimit = 10,
+        clientSendSpeed = 10000,
+        clientReceiveSpeed = 10000,
+        serverSendSpeed = 10000,
+        serverReceiveSpeed = 10000,
+        dataMultiplier  = 1024*1024  //4MB
       )
     }
 

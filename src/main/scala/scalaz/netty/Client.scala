@@ -100,6 +100,9 @@ private[netty] object Client {
     bootstrap.group(Netty.clientWorkerGroup)
     bootstrap.channel(classOf[NioSocketChannel])
     bootstrap.option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
+    bootstrap.option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
+    config.soSndBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_SNDBUF, _))
+    config.soRcvBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_RCVBUF, _))
 
     bootstrap.handler(new ChannelInitializer[SocketChannel] {
       def initChannel(ch: SocketChannel): Unit = {
@@ -121,8 +124,8 @@ private[netty] object Client {
   } join
 }
 
-final case class ClientConfig(keepAlive: Boolean, limit: Int)
+final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
 
 object ClientConfig {
-  val Default = ClientConfig(true, 1000)
+  val Default = ClientConfig(true, 1000, false, None, None)
 }

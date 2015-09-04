@@ -135,7 +135,13 @@ private[netty] object Server {
     bootstrap.group(bossGroup, Netty.serverWorkerGroup)
       .channel(classOf[NioServerSocketChannel])
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
-      .childHandler(new ChannelInitializer[SocketChannel] {
+      .option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
+
+    // these do not seem to work with childOption
+    config.soSndBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_SNDBUF, _))
+    config.soRcvBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_RCVBUF, _))
+
+    bootstrap.childHandler(new ChannelInitializer[SocketChannel] {
         def initChannel(ch: SocketChannel): Unit = {
           if (config.codeFrames) {
             ch.pipeline
@@ -158,9 +164,10 @@ private[netty] object Server {
   } join
 }
 
-final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean)
+final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
 
 object ServerConfig {
   // 1000?  does that even make sense?
-  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true)
+  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true, false, None, None)
+
 }

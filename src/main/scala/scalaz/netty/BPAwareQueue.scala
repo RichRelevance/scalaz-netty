@@ -41,23 +41,11 @@ private[netty] final class BPAwareQueue[A](val limit: Int) {
   @inline
   private def decrease: Long = queueSize.decrementAndGet
 
-  /**
-   * This method needs to be called whenever the netty-worker thread calls us with a received message and we insert it into to the queue.
-   *
-   * As a side-effect it may disable auto-read should the queue size go above the limit
-   */
   private def enableBPIfNecessary(channelConfig: ChannelConfig): Unit =
     if (increase >= limit && channelConfig.isAutoRead) {
       channelConfig.setAutoRead(false)
     }
 
-
-  /**
-   * This method needs to be called when we dequeue a message form the message queue.
-   *
-   * As a side-effect it may enable autoread should the queue size go below half of the limit
-   *
-   */
   private def disableBPIfNecessary(channelConfig: ChannelConfig): Unit =
     if (decrease <= lowerBound && !channelConfig.isAutoRead) {
       channelConfig.setAutoRead(true)
