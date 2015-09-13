@@ -29,14 +29,13 @@ import java.util.concurrent.ExecutorService
 import _root_.io.netty.bootstrap._
 import _root_.io.netty.buffer._
 import _root_.io.netty.channel._
-import _root_.io.netty.channel.nio._
 import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[ByteVector]) {
+private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queue: BPAwareQueue[ByteVector]) {
 
-  def read: Process[Task, ByteVector] = queue.dequeue
+  def read: Process[Task, ByteVector] = queue.dequeue(channel.config)
 
   def write(implicit pool: ExecutorService): Sink[Task, ByteVector] = {
     def inner(bv: ByteVector): Task[Unit] = {
@@ -61,7 +60,7 @@ private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queu
   }
 }
 
-private[netty] final class ClientHandler(queue: async.mutable.Queue[ByteVector]) extends ChannelInboundHandlerAdapter {
+private[netty] final class ClientHandler(queue: BPAwareQueue[ByteVector]) extends ChannelInboundHandlerAdapter {
 
   override def channelInactive(ctx: ChannelHandlerContext): Unit = {
     // if the connection is remotely closed, we need to clean things up on our side
@@ -74,12 +73,13 @@ private[netty] final class ClientHandler(queue: async.mutable.Queue[ByteVector])
     val buf = msg.asInstanceOf[ByteBuf]
     val dst = Array.ofDim[Byte](buf.capacity())
     buf.getBytes(0, dst)
-    val bv = ByteVector.view(dst) 
-    
+    val bv = ByteVector.view(dst)
     buf.release()
 
-    // because this is run and not runAsync, we have backpressure propagation
-    queue.enqueueOne(bv).run
+    val channelConfig = ctx.channel.config
+
+    //this could be run async too, but then we introduce some latency. It's better to run this on the netty worker thread as enqueue uses Strategy.Sequential
+    queue.enqueueOne(channelConfig, bv).run
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
@@ -94,12 +94,15 @@ private[netty] object Client {
     //val client = new Client(config.limit)
     val bootstrap = new Bootstrap
 
-    val queue = async.boundedQueue[ByteVector](config.limit)
+
+    val queue = BPAwareQueue[ByteVector](config.limit)
     
     bootstrap.group(Netty.clientWorkerGroup)
     bootstrap.channel(classOf[NioSocketChannel])
-
     bootstrap.option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
+    bootstrap.option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
+    config.soSndBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_SNDBUF, _))
+    config.soRcvBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_RCVBUF, _))
 
     bootstrap.handler(new ChannelInitializer[SocketChannel] {
       def initChannel(ch: SocketChannel): Unit = {
@@ -121,8 +124,8 @@ private[netty] object Client {
   } join
 }
 
-final case class ClientConfig(keepAlive: Boolean, limit: Int)
+final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
 
 object ClientConfig {
-  val Default = ClientConfig(true, 1000)
+  val Default = ClientConfig(true, 1000, false, None, None)
 }

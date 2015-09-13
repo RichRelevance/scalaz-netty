@@ -53,8 +53,11 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.net
 
 private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService, S: Strategy) extends ChannelInboundHandlerAdapter {
 
+  private val channelConfig = channel.config
+
   // data from a single connection
-  private val queue = async.boundedQueue[ByteVector](limit)
+  private val queue = BPAwareQueue[ByteVector](limit)
+
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
@@ -85,7 +88,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     buf.release()
 
     // because this is run and not runAsync, we have backpressure propagation
-    queue.enqueueOne(bv).run
+    queue.enqueueOne(channelConfig, bv).run
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
@@ -95,7 +98,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
   }
 
   // do not call more than once!
-  private def read: Process[Task, ByteVector] = queue.dequeue
+  private def read: Process[Task, ByteVector] = queue.dequeue(channelConfig)
 
   private def write: Sink[Task, ByteVector] = {
     def inner(bv: ByteVector): Task[Unit] = {
@@ -132,7 +135,13 @@ private[netty] object Server {
     bootstrap.group(bossGroup, Netty.serverWorkerGroup)
       .channel(classOf[NioServerSocketChannel])
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
-      .childHandler(new ChannelInitializer[SocketChannel] {
+      .option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
+
+    // these do not seem to work with childOption
+    config.soSndBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_SNDBUF, _))
+    config.soRcvBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_RCVBUF, _))
+
+    bootstrap.childHandler(new ChannelInitializer[SocketChannel] {
         def initChannel(ch: SocketChannel): Unit = {
           if (config.codeFrames) {
             ch.pipeline
@@ -155,9 +164,10 @@ private[netty] object Server {
   } join
 }
 
-final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean)
+final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
 
 object ServerConfig {
   // 1000?  does that even make sense?
-  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true)
+  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true, false, None, None)
+
 }
