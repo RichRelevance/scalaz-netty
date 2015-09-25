@@ -34,9 +34,9 @@ import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])]) { server =>
+private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[Process[Task, Exchange[ByteVector, ByteVector]]]) { server =>
 
-  def listen: Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] =
+  def listen: Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] =
     queue.dequeue
 
   def shutdown(implicit pool: ExecutorService): Task[Unit] = {
@@ -51,7 +51,7 @@ private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.net
   }
 }
 
-private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])], limit: Int)(implicit pool: ExecutorService, S: Strategy) extends ChannelInboundHandlerAdapter {
+private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: async.mutable.Queue[Process[Task, Exchange[ByteVector, ByteVector]]], limit: Int)(implicit pool: ExecutorService, S: Strategy) extends ChannelInboundHandlerAdapter {
 
   // data from a single connection
   private val queue = async.boundedQueue[ByteVector](limit)
@@ -60,10 +60,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
       Process(Exchange(read, write)) onComplete Process.eval(shutdown).drain
 
-    // gross...
-    val addr = channel.remoteAddress.asInstanceOf[InetSocketAddress]
-
-    serverQueue.enqueueOne((addr, process)).run
+    serverQueue.enqueueOne(process).run
 
     super.channelActive(ctx)
   }
@@ -127,7 +124,7 @@ private[netty] object Server {
     //val server = new Server(bossGroup, config.limit)
     val bootstrap = new ServerBootstrap
 
-    val serverQueue = async.boundedQueue[(InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])](config.limit)
+    val serverQueue = async.boundedQueue[Process[Task, Exchange[ByteVector, ByteVector]]](config.limit)
 
     bootstrap.group(bossGroup, Netty.serverWorkerGroup)
       .channel(classOf[NioServerSocketChannel])

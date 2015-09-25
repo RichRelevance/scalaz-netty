@@ -44,7 +44,7 @@ object Netty {
 
   private[netty] lazy val serverWorkerGroup = new NioEventLoopGroup(1, workerGroup("netty-server-worker"))
 
-  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, (InetSocketAddress, Process[Task, Exchange[ByteVector, ByteVector]])] = {
+  def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] = {
     Process.await(Server(bind, config)) { server: Server =>
       server.listen onComplete Process.eval(server.shutdown).drain
     }

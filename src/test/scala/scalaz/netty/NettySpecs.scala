@@ -51,11 +51,9 @@ object NettySpecs extends Specification {
     "round trip some simple data" in {
       val addr = new InetSocketAddress("localhost", 9090)
 
-      val server = Netty server addr take 1 flatMap {
-        case (_, incoming) => {
-          incoming flatMap { exchange =>
-            exchange.read take 1 to exchange.write drain
-          }
+      val server = Netty server addr take 1 flatMap { incoming =>
+        incoming flatMap { exchange =>
+          exchange.read take 1 to exchange.write drain
         }
       }
 
@@ -88,11 +86,9 @@ object NettySpecs extends Specification {
     "round trip some simple data to ten simultaneous clients" in {
       val addr = new InetSocketAddress("localhost", 9090)
 
-      val server = merge.mergeN(Netty server addr map {
-        case (_, incoming) => {
-          incoming flatMap { exchange =>
-            exchange.read take 1 to exchange.write drain
-          }
+      val server = merge.mergeN(Netty server addr map { incoming =>
+        incoming flatMap { exchange =>
+          exchange.read take 1 to exchange.write drain
         }
       })
 
