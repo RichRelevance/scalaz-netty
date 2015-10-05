@@ -25,6 +25,7 @@ import scodec.bits.ByteVector
 
 import java.net.InetSocketAddress
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.atomic.AtomicReference
 
 import _root_.io.netty.bootstrap._
 import _root_.io.netty.buffer._
@@ -55,10 +56,11 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
 
   // data from a single connection
   private val queue = async.boundedQueue[ByteVector](limit)
+  private val halt: AtomicReference[Cause] = new AtomicReference(Cause.End)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
-      Process(Exchange(read, write)) onComplete Process.eval(shutdown).drain
+      Process(Exchange(read, write)) onComplete shutdown
 
     // gross...
     val addr = channel.remoteAddress.asInstanceOf[InetSocketAddress]
@@ -89,9 +91,8 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
-    queue.fail(t).run
-
-    // super.exceptionCaught(ctx, t)
+    halt.set(Cause.Error(t))
+    queue.close.run
   }
 
   // do not call more than once!
@@ -112,11 +113,13 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     Process constant (inner _)
   }
 
-  def shutdown: Task[Unit] = {
-    for {
+  def shutdown: Process[Task, Nothing] = {
+    val close = for {
       _ <- Netty toTask channel.close()
       _ <- queue.close
     } yield ()
+
+    Process eval_ close causedBy halt.get
   }
 }
 

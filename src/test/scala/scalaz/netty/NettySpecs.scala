@@ -141,52 +141,49 @@ object NettySpecs extends Specification {
     }
 
     "not lose data on client in rapid-closure scenario" in {
-      val addr = new InetSocketAddress("localhost", 9090)
-      val data = ByteVector(1, 2, 3)
+      forall(0 until 10) { i =>
+        val addr = new InetSocketAddress("localhost", 9090 + i)
+        val data = ByteVector(1, 2, 3)
 
-      val server = for {
-        (_, incoming) <- Netty server addr take 1
-        Exchange(_, write) <- incoming
-        _ <- write take 1 evalMap { _(data) }
-      } yield ()        // close connection instantly
+        val server = for {
+          (_, incoming) <- Netty server addr take 1
+          Exchange(_, write) <- incoming
+          _ <- write take 1 evalMap { _(data) }
+        } yield ()        // close connection instantly
 
-      val client = for {
-        _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler)
-        Exchange(read, _) <- Netty connect addr
-        back <- read take 1
-      } yield back
+        val client = for {
+          _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
+          Exchange(read, _) <- Netty connect addr
+          back <- read take 1
+        } yield back
 
-      val task = (server.drain wye client)(wye.mergeHaltBoth).runLog.timed(3000)(scheduler).attempt
+        val driver: Process[Task, ByteVector] = server.drain merge client
+        val task = (driver wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler))(wye.mergeHaltBoth).runLast
 
-      forall(0 until 10) { _ =>
-        task.run must beLike {
-          case \/-(Seq(data)) => ok
-        }
+        task.run must beSome(data)
       }
     }
 
     "not lose data on server in rapid-closure scenario" in {
-      val addr = new InetSocketAddress("localhost", 9090)
-      val data = ByteVector(1, 2, 3)
+      forall(0 until 10) { i =>
+        val addr = new InetSocketAddress("localhost", 9090 + i)
+        val data = ByteVector(1, 2, 3)
 
-      val server = for {
-        (_, incoming) <- Netty server addr take 1
-        Exchange(read, _) <- incoming
-        back <- read take 1
-      } yield back
+        val server = for {
+          (_, incoming) <- Netty server addr take 1
+          Exchange(read, _) <- incoming
+          back <- read take 1
+        } yield back
 
-      val client = for {
-        _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler)
-        Exchange(_, write) <- Netty connect addr
-        _ <- write take 1 evalMap { _(data) }
-      } yield ()      // close connection instantly
+        val client = for {
+          _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
+          Exchange(_, write) <- Netty connect addr
+          _ <- write take 1 evalMap { _(data) }
+        } yield ()      // close connection instantly
 
-      val task = (server wye client.drain)(wye.mergeHaltBoth).runLog.timed(3000)(scheduler).attempt
+        val task = ((server merge client.drain) wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler))(wye.mergeHaltBoth).runLast
 
-      forall(0 until 10) { _ =>
-        task.run must beLike {
-          case \/-(Seq(data)) => ok
-        }
+        task.run must beSome(data)
       }
     }
   }
