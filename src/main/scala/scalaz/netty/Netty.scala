@@ -52,7 +52,7 @@ object Netty {
 
   def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Exchange[ByteVector, ByteVector]] = {
     Process.await(Client(to, config)) { client: Client =>
-      Process(Exchange(client.read, client.write)) onComplete Process.eval(client.shutdown).drain
+      Process(Exchange(client.read, client.write)) onComplete client.shutdown
     }
   }
 
