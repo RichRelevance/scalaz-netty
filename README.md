@@ -5,21 +5,19 @@
 
 ## Getting Started
 
-First, you'll need to add the RichRelevance and Scalaz Bintray resolver settings to your SBT file:
+First, you'll need to add the RichRelevance Bintray resolver setting to your SBT file:
 
 ```sbt
-resolvers ++= Seq(
-  "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases",
-  "RichRelevance Bintray" at "http://dl.bintray.com/rr/releases")
+resolvers += "RichRelevance Bintray" at "http://dl.bintray.com/rr/releases"
 ```
 
 If you want to be able to use snapshot releases, replace `releases` with `snapshots`.  With the resolver configured, add the following dependency specification:
 
 ```sbt
-libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.1.10"
+libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.2"
 ```
 
-Builds are published for Scala 2.11.7 and 2.12.0-M2.  The latest stable release is **0.1.10**.  The upstream dependencies for this project include the following:
+Builds are published for Scala 2.11.7 and 2.12.0-M2.  The latest stable release is **0.2**.  The upstream dependencies for this project include the following:
 
 - scalaz 7.1.3
 - scalaz-stream 0.7.2a
