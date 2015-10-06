@@ -46,14 +46,12 @@ def log(msg: String): Task[Unit] = Task.delay(println(s"$msg"))
 
 val address = new InetSocketAddress("localhost", 9090)
 
-val EchoServer = merge.mergeN(Netty server address map {
-  case (addr, incoming) => {
-    for {
-      exchange <- incoming
-      _ <- Process.eval(log(s"accepted connection from $addr"))
-      _ <- exchange.read to exchange.write
-    } yield ()
-  }
+val EchoServer = merge.mergeN(Netty server address map { incoming =>
+  for {
+    exchange <- incoming
+    _ <- Process.eval(log(s"accepted connection from $addr"))
+    _ <- exchange.read to exchange.write
+  } yield ()
 })
 
 /*
