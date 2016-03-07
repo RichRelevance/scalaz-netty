@@ -17,6 +17,8 @@
 package scalaz
 package netty
 
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+
 import concurrent._
 import stream._
 import syntax.monad._
@@ -104,7 +106,7 @@ object NettySpecs extends Specification {
 
       val delay = time.sleep(200 millis)(Strategy.DefaultStrategy, scheduler)
 
-      val test = (server.drain wye merge.mergeN(Process.range(0, 10) map { n => delay ++ client(n) }))(wye.mergeHaltBoth)
+      val test = (server.drain wye merge.mergeN(Process.range(0, 10) map { n => delay ++ client(n) })) (wye.mergeHaltBoth)
 
       val results = test.runLog timed (15 seconds) run
 
@@ -144,8 +146,10 @@ object NettySpecs extends Specification {
         val server = for {
           incoming <- Netty server addr take 1
           Exchange(_, write) <- incoming
-          _ <- write take 1 evalMap { _(data) }
-        } yield ()        // close connection instantly
+          _ <- write take 1 evalMap {
+            _ (data)
+          }
+        } yield () // close connection instantly
 
         val client = for {
           _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
@@ -154,7 +158,7 @@ object NettySpecs extends Specification {
         } yield back
 
         val driver: Process[Task, ByteVector] = server.drain merge client
-        val task = (driver wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler))(wye.mergeHaltBoth).runLast
+        val task = (driver wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler)) (wye.mergeHaltBoth).runLast
 
         task.run must beSome(data)
       }
@@ -174,14 +178,23 @@ object NettySpecs extends Specification {
         val client = for {
           _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
           Exchange(_, write) <- Netty connect addr
-          _ <- write take 1 evalMap { _(data) }
-        } yield ()      // close connection instantly
+          _ <- write take 1 evalMap {
+            _ (data)
+          }
+        } yield () // close connection instantly
 
-        val task = ((server merge client.drain) wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler))(wye.mergeHaltBoth).runLast
+        val task = ((server merge client.drain) wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler)) (wye.mergeHaltBoth).runLast
 
         task.run must beSome(data)
       }
     }
+
+    def clock(ticksPerSec: Int) = time.awakeEvery((1000000 / ticksPerSec).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+
+    def throttle[T](p: Process[Task, T], ticksPerSec: Int): Process[Task, T] =
+      p.zip(clock(ticksPerSec)).map {
+        case (a, _) => a
+      }
 
     def roundTripTest(port: Int,
                       noOfPackets: Int,
@@ -192,19 +205,15 @@ object NettySpecs extends Specification {
                       serverSendSpeed: Int, // messages per second
                       serverReceiveSpeed: Int, // messages per second
                       dataMultiplier: Int = 1 // sizing the packet
-                       ) = {
+                     ) = {
 
-      val deadbeef = ByteVector(0xDE, 0xAD, 0xBE, 0xEF) //4 bytes
-      val addr = new InetSocketAddress("localhost", port)
-      val data =  (1 to dataMultiplier).foldLeft(deadbeef)((a, counter) => a++deadbeef)
+      val deadBeef = ByteVector(0xDE, 0xAD, 0xBE, 0xEF) //4 bytes
+      val address = new InetSocketAddress("localhost", port)
+      val data = (1 to dataMultiplier).foldLeft(deadBeef)((a, _) => a ++ deadBeef)
 
-      val clientReceiveClock = time.awakeEvery((1000000 / clientReceiveSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
-      val clientSendClock = time.awakeEvery((1000000 / clientSendSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
+      val counter = new AtomicInteger(0)
 
-      val serverReceiveClock = time.awakeEvery((1000000 / serverReceiveSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
-      val serverSendClock = time.awakeEvery((1000000 / serverSendSpeed).microseconds)(Strategy.DefaultStrategy, Executors.newScheduledThreadPool(1))
-
-      val server = (Netty.server(addr,
+      val server = (Netty.server(address,
         ServerConfig(
           keepAlive = true,
           numThreads = Runtime.getRuntime.availableProcessors,
@@ -212,48 +221,37 @@ object NettySpecs extends Specification {
           codeFrames = true,
           tcpNoDelay = true,
           soSndBuf = None,
-          soRcvBuf = None
+          soRcvBuf = None,
+          eventLoopType = EventLoopType.Select
         ))) take 1 flatMap { incoming =>
-          incoming flatMap { exchange =>
-            exchange.read.zip(serverReceiveClock).map {
-              case (a, _) => a
-            }.take(noOfPackets).zip(serverSendClock).map {
-              case (a, _) => a
-            } to exchange.write drain
-          }
+        incoming flatMap { exchange =>
+          throttle(
+            throttle(exchange.read, serverReceiveSpeed),
+            serverSendSpeed
+          ) to exchange.write
         }
+      }
 
-      val client = Netty.connect(addr,
+      val client = Netty.connect(address,
         ClientConfig(
           keepAlive = true,
           limit = clientBpQueueLimit,
           tcpNoDelay = true,
           soSndBuf = None,
-          soRcvBuf = None)
+          soRcvBuf = None,
+          eventLoopType = EventLoopType.Select
+        )
       ).flatMap { exchange =>
-        val initiate = Process(data).repeat.take(noOfPackets).zip(clientSendClock).map {
-          case (a, _) => a
-        } to exchange.write
+        val sendPackets = throttle(Process(data).repeat.take(noOfPackets), clientSendSpeed) to exchange.write
+        val readPackets = throttle(exchange.read.take(noOfPackets), clientReceiveSpeed).map(_ => counter.incrementAndGet())
 
-        val check = for {
-          results <- exchange.read.zip(clientReceiveClock).map {
-            case (a, _) => a
-          }.runLog
-          _ <- Task delay {
-            results must haveSize(noOfPackets)
-          }
-        } yield ()
-
-        Process.eval_(for (_ <- initiate.run; last <- check) yield (()))
+        sendPackets ++ readPackets
       }
 
-      val delay = time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler)
+      val wait = time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler)
 
-      val test = server merge (delay ++ client)
-
-      test.run timed ((10 + noOfPackets / Math.min(Math.min(serverReceiveSpeed, serverSendSpeed), Math.min(clientReceiveSpeed, clientSendSpeed))) seconds) run
-
-      ok
+      server.wye(wait ++ client)(wye.mergeHaltR).run.run
+      counter.get mustEqual noOfPackets
     }
 
     "round trip more data with slow client receive" in {
@@ -268,7 +266,6 @@ object NettySpecs extends Specification {
         serverReceiveSpeed = 10000
       )
     }
-
 
     "round trip more data with slow server receive" in {
       roundTripTest(
@@ -289,10 +286,10 @@ object NettySpecs extends Specification {
         noOfPackets = 10000,
         clientBpQueueLimit = 10,
         serverBpQueueLimit = 10,
-        clientSendSpeed = 2000,
-        clientReceiveSpeed = 2000,
-        serverSendSpeed = 2000,
-        serverReceiveSpeed = 2000
+        clientSendSpeed = 10000,
+        clientReceiveSpeed = 10000,
+        serverSendSpeed = 10000,
+        serverReceiveSpeed = 10000
       )
     }
 
@@ -306,7 +303,7 @@ object NettySpecs extends Specification {
         clientReceiveSpeed = 10000,
         serverSendSpeed = 10000,
         serverReceiveSpeed = 10000,
-        dataMultiplier  = 256*256
+        dataMultiplier = 256 * 256
       )
     }
 
