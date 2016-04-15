@@ -14,13 +14,13 @@ resolvers += "RichRelevance Bintray" at "http://dl.bintray.com/rr/releases"
 If you want to be able to use snapshot releases, replace `releases` with `snapshots`.  With the resolver configured, add the following dependency specification:
 
 ```sbt
-libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.3"
+libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.3a"
 ```
 
-Builds are published for Scala 2.11.8.  The latest stable release is **0.3**.  The upstream dependencies for this project include the following:
+Builds are published for Scala 2.11.8.  The latest stable release is **0.3a**.  The upstream dependencies for this project include the following:
 
-- scalaz 7.1.7
-- scalaz-stream 0.8.0
+- scalaz 7.2.2
+- scalaz-stream 0.8a
 - scodec-bits 1.0.12
 - netty 4.0.36.Final
 
