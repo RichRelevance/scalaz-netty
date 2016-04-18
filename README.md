@@ -17,12 +17,26 @@ If you want to be able to use snapshot releases, replace `releases` with `snapsh
 libraryDependencies += "org.scalaz.netty" %% "scalaz-netty" % "0.3.2"
 ```
 
-Builds are published for Scala 2.11.8.  The latest stable release is **0.3.2**.  The upstream dependencies for this project include the following:
+Builds are published for Scala 2.11.8.  The latest stable releases are **0.3.2**, **0.3.2a**, **0.3**, and **0.3a**.
+
+Versions that end in 'a' in the 0.3.x series use scalaz 7.2.x, versions without use scalaz 7.1.x.
+
+The 0.3.2 versions contain one additional feature over the 0.3, https://github.com/RichRelevance/scalaz-netty/pull/28, which has only been tested on Linux and may not work elsewhere.
+
+The upstream dependencies for this project include the following:
+
+- scodec-bits 1.0.12
+- netty 4.0.36.Final
+
+For version 0.3 and 0.3.2:
 
 - scalaz 7.1.7
 - scalaz-stream 0.8
-- scodec-bits 1.0.12
-- netty 4.0.36.Final
+
+And for version 0.3a and 0.3.2a:
+
+- scalaz 7.2.2
+- scalaz-stream 0.8a
 
 Snapshot releases follow the version scheme `master-<sha1>`, where the "`sha1`" component is the Git commit that was snapshotted.  Not all commits will have corresponding snapshot releases.  You can browse the list of snapshot releases [on bintray](https://bintray.com/rr/snapshots/scalaz-netty/view).
 
