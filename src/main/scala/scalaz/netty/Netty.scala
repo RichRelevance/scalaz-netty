@@ -23,26 +23,12 @@ import stream._
 import scodec.bits.ByteVector
 
 import java.net.InetSocketAddress
-import java.util.concurrent.{ExecutorService, ThreadFactory}
+import java.util.concurrent.ExecutorService
 
 import _root_.io.netty.channel._
 import _root_.io.netty.channel.nio.NioEventLoopGroup
 
 object Netty {
-
-  private[netty] def workerGroup(name: String) = new ThreadFactory {
-    def newThread(r: Runnable): Thread = {
-      val back = new Thread(r)
-      back.setName(name)
-      back.setDaemon(true) // we're never going to clean this up
-      back.setPriority(8) // get in, and get out.  fast.
-      back
-    }
-  }
-
-  private[netty] lazy val clientWorkerGroup = new NioEventLoopGroup(1, workerGroup("netty-client-worker"))
-
-  private[netty] lazy val serverWorkerGroup = new NioEventLoopGroup(1, workerGroup("netty-server-worker"))
 
   def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] = {
     Process.await(Server(bind, config)) { server: Server =>

@@ -45,8 +45,12 @@ private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queu
         val buf = channel.alloc().buffer(data.length)
         buf.writeBytes(data)
 
-        Netty toTask channel.writeAndFlush(buf)
-      } join
+        channel.eventLoop().execute(new Runnable() {
+          override def run: Unit = {
+            channel.writeAndFlush(buf)
+          }
+        })
+      }
     }
 
     // TODO termination
@@ -80,10 +84,7 @@ private[netty] final class ClientHandler(queue: BPAwareQueue[ByteVector], halt: 
 
     buf.release()
 
-    val channelConfig = ctx.channel.config
-
-    //this could be run async too, but then we introduce some latency. It's better to run this on the netty worker thread as enqueue uses Strategy.Sequential
-    queue.enqueueOne(channelConfig, bv).run
+    queue.enqueueOne(ctx.channel.config, bv).run
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
@@ -100,8 +101,10 @@ private[netty] object Client {
     val queue = BPAwareQueue[ByteVector](config.limit)
     val halt = new AtomicReference[Cause](Cause.End)
 
-    bootstrap.group(Netty.clientWorkerGroup)
-    bootstrap.channel(classOf[NioSocketChannel])
+    bootstrap.group(config.eventLoopType.clientWorkerGroup(1))
+    bootstrap.channel(config.eventLoopType.channel)
+    bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+
     bootstrap.option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
     bootstrap.option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
     config.soSndBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_SNDBUF, _))
@@ -127,8 +130,8 @@ private[netty] object Client {
   } join
 }
 
-final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
+final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType)
 
 object ClientConfig {
-  val Default = ClientConfig(true, 1000, false, None, None)
+  val Default = ClientConfig(true, 1000, false, None, None, EventLoopType.Select)
 }

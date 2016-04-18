@@ -35,7 +35,8 @@ import _root_.io.netty.channel.socket._
 import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
-private[netty] class Server(bossGroup: NioEventLoopGroup, channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[Process[Task, Exchange[ByteVector, ByteVector]]]) { server =>
+private[netty] class Server(bossGroup: EventLoopGroup, channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[Process[Task, Exchange[ByteVector, ByteVector]]]) {
+  server =>
 
   def listen: Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] =
     queue.dequeue
@@ -104,8 +105,13 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
         val buf = channel.alloc().buffer(data.length)
         buf.writeBytes(data)
 
-        Netty toTask channel.writeAndFlush(buf)
-      } join
+        channel.eventLoop().execute(new Runnable() {
+          override def run: Unit = {
+            channel.writeAndFlush(buf)
+          }
+        })
+
+      }
     }
 
     // TODO termination
@@ -124,15 +130,17 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
 
 private[netty] object Server {
   def apply(bind: InetSocketAddress, config: ServerConfig)(implicit pool: ExecutorService, S: Strategy): Task[Server] = Task delay {
-    val bossGroup = new NioEventLoopGroup(config.numThreads)
+    val bossGroup = config.eventLoopType.bossGroup
+
 
     //val server = new Server(bossGroup, config.limit)
     val bootstrap = new ServerBootstrap
+    bootstrap.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 
     val serverQueue = async.boundedQueue[Process[Task, Exchange[ByteVector, ByteVector]]](config.limit)
 
-    bootstrap.group(bossGroup, Netty.serverWorkerGroup)
-      .channel(classOf[NioServerSocketChannel])
+    bootstrap.group(bossGroup, config.eventLoopType.serverWorkerGroup(config.numThreads))
+      .channel(config.eventLoopType.serverChannel)
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
       .option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
 
@@ -141,16 +149,16 @@ private[netty] object Server {
     config.soRcvBuf.foreach(bootstrap.option[java.lang.Integer](ChannelOption.SO_RCVBUF, _))
 
     bootstrap.childHandler(new ChannelInitializer[SocketChannel] {
-        def initChannel(ch: SocketChannel): Unit = {
-          if (config.codeFrames) {
-            ch.pipeline
-              .addLast("frame encoding", new LengthFieldPrepender(4))
-              .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
-          }
-
-          ch.pipeline.addLast("incoming handler", new ServerHandler(ch, serverQueue, config.limit))
+      def initChannel(ch: SocketChannel): Unit = {
+        if (config.codeFrames) {
+          ch.pipeline
+            .addLast("frame encoding", new LengthFieldPrepender(4))
+            .addLast("frame decoding", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
         }
-      })
+
+        ch.pipeline.addLast("incoming handler", new ServerHandler(ch, serverQueue, config.limit))
+      }
+    })
 
     val bindF = bootstrap.bind(bind)
 
@@ -163,10 +171,10 @@ private[netty] object Server {
   } join
 }
 
-final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int])
+final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType)
 
 object ServerConfig {
   // 1000?  does that even make sense?
-  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors, 1000, true, false, None, None)
+  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors/2, 1000, true, false, None, None, EventLoopType.Select)
 
 }

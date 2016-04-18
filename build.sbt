@@ -33,6 +33,10 @@ libraryDependencies ++= Seq(
 
   "io.netty"          %  "netty-codec"   % "4.0.36.Final",
 
+  "io.netty"          %  "netty-transport-native-epoll"   % "4.0.36.Final",
+
+  "io.netty"          %  "netty-transport-native-epoll" % "4.0.36.Final" classifier "linux-x86_64",
+
   "org.scodec"        %% "scodec-bits"   % "1.0.12")
 
 libraryDependencies ++= Seq(
