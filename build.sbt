@@ -28,8 +28,8 @@ scalaVersion := "2.11.8"
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
-  "org.scalaz"        %% "scalaz-core"   % "7.2.2",
-  "org.scalaz.stream" %% "scalaz-stream" % "0.8a",
+  "org.scalaz"        %% "scalaz-core"   % "7.1.7",
+  "org.scalaz.stream" %% "scalaz-stream" % "0.8",
 
   "io.netty"          %  "netty-codec"   % "4.0.36.Final",
 
@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "org.scodec"        %% "scodec-bits"   % "1.0.12")
 
 libraryDependencies ++= Seq(
-  "org.specs2"     %% "specs2-core" % "3.7.3"  % "test",
+  "org.specs2"     %% "specs2-core" % "3.6.6"  % "test",
   "org.scalacheck" %% "scalacheck"  % "1.13.0" % "test")
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/"))
