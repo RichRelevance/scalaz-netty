@@ -79,8 +79,8 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
 
   override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = {
     val buf = msg.asInstanceOf[ByteBuf]
-    val dst = Array.ofDim[Byte](buf.capacity())
-    buf.getBytes(0, dst)
+    val dst = Array.ofDim[Byte](buf.readableBytes())
+    buf.readBytes(dst)
 
     val bv = ByteVector.view(dst)
 
