@@ -65,14 +65,14 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     val process: Process[Task, Exchange[ByteVector, ByteVector]] =
       Process(Exchange(read, write)) onComplete shutdown
 
-    serverQueue.enqueueOne(process).run
+    serverQueue.enqueueOne(process).unsafePerformSync
 
     super.channelActive(ctx)
   }
 
   override def channelInactive(ctx: ChannelHandlerContext): Unit = {
     // if the connection is remotely closed, we need to clean things up on our side
-    queue.close.run
+    queue.close.unsafePerformSync
 
     super.channelInactive(ctx)
   }
@@ -87,12 +87,12 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     buf.release()
 
     // because this is run and not runAsync, we have backpressure propagation
-    queue.enqueueOne(channelConfig, bv).run
+    queue.enqueueOne(channelConfig, bv).unsafePerformSync
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
     halt.set(Cause.Error(t))
-    queue.close.run
+    queue.close.unsafePerformSync
   }
 
   // do not call more than once!
@@ -115,7 +115,7 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
     }
 
     // TODO termination
-    Process constant (inner _)
+    Process constant inner _
   }
 
   def shutdown: Process[Task, Nothing] = {

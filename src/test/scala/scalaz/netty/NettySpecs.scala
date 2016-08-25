@@ -80,7 +80,7 @@ object NettySpecs extends Specification {
 
       val test = server.drain merge (delay ++ client)
 
-      test.run timed (15 seconds) run
+      test.run timed (15 seconds) unsafePerformSync
 
       ok
     }
@@ -108,7 +108,7 @@ object NettySpecs extends Specification {
 
       val test = (server.drain wye merge.mergeN(Process.range(0, 10) map { n => delay ++ client(n) })) (wye.mergeHaltBoth)
 
-      val results = test.runLog timed (15 seconds) run
+      val results = test.runLog timed (15 seconds) unsafePerformSync
 
       results must haveSize(10)
       results must containAllOf(0 until 10 map { n => n -> ByteVector(n) })
@@ -119,7 +119,7 @@ object NettySpecs extends Specification {
 
       val client = Netty connect addr map { _ => () }
 
-      val result = client.run.attempt.run
+      val result = client.run.attempt.unsafePerformSync
 
       result must beLike {
         case -\/(_) => ok
@@ -131,7 +131,7 @@ object NettySpecs extends Specification {
 
       val client = Netty connect addr map { _ => () }
 
-      val result = client.run.attempt.run
+      val result = client.run.attempt.unsafePerformSync
 
       result must eventually(beLike[Throwable \/ Unit] {
         case -\/(_) => ok
@@ -160,7 +160,7 @@ object NettySpecs extends Specification {
         val driver: Process[Task, ByteVector] = server.drain merge client
         val task = (driver wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler)) (wye.mergeHaltBoth).runLast
 
-        task.run must beSome(data)
+        task.unsafePerformSync must beSome(data)
       }
     }
 
@@ -185,7 +185,7 @@ object NettySpecs extends Specification {
 
         val task = ((server merge client.drain) wye time.sleep(3 seconds)(Strategy.DefaultStrategy, scheduler)) (wye.mergeHaltBoth).runLast
 
-        task.run must beSome(data)
+        task.unsafePerformSync must beSome(data)
       }
     }
 
@@ -250,7 +250,7 @@ object NettySpecs extends Specification {
 
       val wait = time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler)
 
-      server.wye(wait ++ client)(wye.mergeHaltR).run.run
+      server.wye(wait ++ client)(wye.mergeHaltR).run.unsafePerformSync
       counter.get mustEqual noOfPackets
     }
 

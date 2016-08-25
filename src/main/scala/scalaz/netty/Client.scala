@@ -17,12 +17,6 @@
 package scalaz
 package netty
 
-import concurrent._
-import stream._
-import syntax.monad._
-
-import scodec.bits.ByteVector
-
 import java.net.InetSocketAddress
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicReference
@@ -31,8 +25,12 @@ import _root_.io.netty.bootstrap._
 import _root_.io.netty.buffer._
 import _root_.io.netty.channel._
 import _root_.io.netty.channel.socket._
-import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
+import scodec.bits.ByteVector
+
+import scalaz.concurrent._
+import scalaz.stream._
+import scalaz.syntax.monad._
 
 private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queue: BPAwareQueue[ByteVector], halt: AtomicReference[Cause]) {
 
@@ -54,7 +52,7 @@ private[netty] final class Client(channel: _root_.io.netty.channel.Channel, queu
     }
 
     // TODO termination
-    Process constant (inner _)
+    Process constant inner _
   }
 
   def shutdown(implicit pool: ExecutorService): Process[Task, Nothing] = {
@@ -71,7 +69,7 @@ private[netty] final class ClientHandler(queue: BPAwareQueue[ByteVector], halt: 
 
   override def channelInactive(ctx: ChannelHandlerContext): Unit = {
     // if the connection is remotely closed, we need to clean things up on our side
-    queue.close.run
+    queue.close.unsafePerformSync
 
     super.channelInactive(ctx)
   }
@@ -84,12 +82,12 @@ private[netty] final class ClientHandler(queue: BPAwareQueue[ByteVector], halt: 
 
     buf.release()
 
-    queue.enqueueOne(ctx.channel.config, bv).run
+    queue.enqueueOne(ctx.channel.config, bv).unsafePerformSync
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, t: Throwable): Unit = {
     halt.set(Cause.Error(t))
-    queue.close.run
+    queue.close.unsafePerformSync
   }
 }
 
