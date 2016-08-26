@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import com.typesafe.sbt.SbtGit._
-import bintray.Keys._
+enablePlugins(GitVersioning)
 
 organization := "org.scalaz.netty"
 
@@ -51,8 +50,6 @@ versionWithGit
 
 git.baseVersion := "master"
 
-bintraySettings
+bintrayOrganization := Some("rr")
 
-bintrayOrganization in bintray := Some("rr")
-
-repository in bintray := (if (version.value startsWith "master") "snapshots" else "releases")
+bintrayRepository := (if (version.value startsWith "master") "snapshots" else "releases")
