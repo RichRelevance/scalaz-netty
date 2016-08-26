@@ -25,18 +25,26 @@ The 0.3.2 versions contain one additional feature over the 0.3, https://github.c
 
 The upstream dependencies for this project include the following:
 
-- scodec-bits 1.0.12
-- netty 4.0.36.Final
+For version 0.4 (Development):
+- scalaz 7.2.5
+- scalaz-stream 0.8.4a
+- scodec-bits 1.1.0
+- netty 4.0.40.Final
 
 For version 0.3 and 0.3.2:
 
 - scalaz 7.1.7
 - scalaz-stream 0.8
+- scodec-bits 1.0.12
+- netty 4.0.36.Final
+
 
 And for version 0.3a and 0.3.2a:
 
 - scalaz 7.2.2
 - scalaz-stream 0.8a
+- scodec-bits 1.0.12
+- netty 4.0.36.Final
 
 Snapshot releases follow the version scheme `master-<sha1>`, where the "`sha1`" component is the Git commit that was snapshotted.  Not all commits will have corresponding snapshot releases.  You can browse the list of snapshot releases [on bintray](https://bintray.com/rr/snapshots/scalaz-netty/view).
 
