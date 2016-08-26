@@ -17,28 +17,26 @@
 package scalaz
 package netty
 
-import concurrent._
-import stream._
-
-import scodec.bits.ByteVector
-
 import java.net.InetSocketAddress
 import java.util.concurrent.ExecutorService
 
 import _root_.io.netty.channel._
-import _root_.io.netty.channel.nio.NioEventLoopGroup
+import scodec.bits.ByteVector
+
+import scalaz.concurrent._
+import scalaz.stream._
 
 object Netty {
 
   def server(bind: InetSocketAddress, config: ServerConfig = ServerConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Process[Task, Exchange[ByteVector, ByteVector]]] = {
-    Process.await(Server(bind, config)) { server: Server =>
-      server.listen onComplete Process.eval(server.shutdown).drain
+    Process.bracket(Server(bind, config))(s => Process.eval(s.shutdown).drain) { server: Server =>
+      server.listen
     }
   }
 
   def connect(to: InetSocketAddress, config: ClientConfig = ClientConfig.Default)(implicit pool: ExecutorService = Strategy.DefaultExecutorService, S: Strategy): Process[Task, Exchange[ByteVector, ByteVector]] = {
-    Process.await(Client(to, config)) { client: Client =>
-      Process(Exchange(client.read, client.write)) onComplete client.shutdown
+    Process.bracket(Client(to, config))(_.shutdown) { client: Client =>
+      Process(Exchange(client.read, client.write))
     }
   }
 
@@ -57,7 +55,7 @@ object Netty {
 
   private def fork[A](t: Task[A])(implicit pool: ExecutorService = Strategy.DefaultExecutorService): Task[A] = {
     Task async { cb =>
-      t runAsync { either =>
+      t unsafePerformAsync { either =>
         pool.submit(new Runnable {
           def run(): Unit = cb(either)
         })
