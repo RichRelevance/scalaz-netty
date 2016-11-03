@@ -145,16 +145,16 @@ object NettySpecs extends Specification {
 
         val server = for {
           incoming <- Netty server addr take 1
-          Exchange(_, write) <- incoming
-          _ <- write take 1 evalMap {
+          exch <- incoming
+          _ <- exch.write take 1 evalMap {
             _ (data)
           }
         } yield () // close connection instantly
 
         val client = for {
           _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
-          Exchange(read, _) <- Netty connect addr
-          back <- read take 1
+          exch <- Netty connect addr
+          back <- exch.read take 1
         } yield back
 
         val driver: Process[Task, ByteVector] = server.drain merge client
@@ -171,14 +171,14 @@ object NettySpecs extends Specification {
 
         val server = for {
           incoming <- Netty server addr take 1
-          Exchange(read, _) <- incoming
-          back <- read take 1
+          exch <- incoming
+          back <- exch.read take 1
         } yield back
 
         val client = for {
           _ <- time.sleep(500 millis)(Strategy.DefaultStrategy, scheduler) ++ Process.emit(())
-          Exchange(_, write) <- Netty connect addr
-          _ <- write take 1 evalMap {
+          exch <- Netty connect addr
+          _ <- exch.write take 1 evalMap {
             _ (data)
           }
         } yield () // close connection instantly
