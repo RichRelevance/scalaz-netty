@@ -30,9 +30,7 @@ import java.util.concurrent.atomic.AtomicReference
 import _root_.io.netty.bootstrap._
 import _root_.io.netty.buffer._
 import _root_.io.netty.channel._
-import _root_.io.netty.channel.nio._
 import _root_.io.netty.channel.socket._
-import _root_.io.netty.channel.socket.nio._
 import _root_.io.netty.handler.codec._
 
 private[netty] class Server(bossGroup: EventLoopGroup, channel: _root_.io.netty.channel.Channel, queue: async.mutable.Queue[Process[Task, Exchange[ByteVector, ByteVector]]]) {

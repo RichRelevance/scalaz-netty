@@ -17,7 +17,7 @@
 package scalaz
 package netty
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.atomic.AtomicInteger
 
 import concurrent._
 import stream._
@@ -28,8 +28,6 @@ import scodec.bits._
 import scala.concurrent.duration._
 
 import org.specs2.mutable._
-
-import org.scalacheck._
 
 import java.net.InetSocketAddress
 import java.util.concurrent.{Executors, ThreadFactory}
