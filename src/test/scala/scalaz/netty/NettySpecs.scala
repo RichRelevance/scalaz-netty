@@ -213,6 +213,10 @@ object NettySpecs extends Specification {
 
       val counter = new AtomicInteger(0)
 
+      val bossPool = EventLoopType.Select.bossGroup
+      val serverWorkerPool = EventLoopType.Select.serverWorkerGroup(5)
+      val clientWorkerPool = EventLoopType.Select.clientWorkerGroup(1)
+
       val server = (Netty.server(address,
         ServerConfig(
           keepAlive = true,
@@ -222,7 +226,9 @@ object NettySpecs extends Specification {
           tcpNoDelay = true,
           soSndBuf = None,
           soRcvBuf = None,
-          eventLoopType = EventLoopType.Select
+          eventLoopType = EventLoopType.Select,
+          Some(bossPool),
+          Some(serverWorkerPool)
         ))) take 1 flatMap { incoming =>
         incoming flatMap { exchange =>
           throttle(
@@ -239,7 +245,8 @@ object NettySpecs extends Specification {
           tcpNoDelay = true,
           soSndBuf = None,
           soRcvBuf = None,
-          eventLoopType = EventLoopType.Select
+          eventLoopType = EventLoopType.Select,
+          Some(clientWorkerPool)
         )
       ).flatMap { exchange =>
         val sendPackets = throttle(Process(data).repeat.take(noOfPackets), clientSendSpeed) to exchange.write

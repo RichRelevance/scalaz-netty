@@ -130,16 +130,15 @@ private[netty] final class ServerHandler(channel: SocketChannel, serverQueue: as
 
 private[netty] object Server {
   def apply(bind: InetSocketAddress, config: ServerConfig)(implicit pool: ExecutorService, S: Strategy): Task[Server] = Task delay {
-    val bossGroup = config.eventLoopType.bossGroup
+    val bossGroup = config.bossPool.getOrElse(config.eventLoopType.bossGroup)
+    val workerGroup = config.workerPool.getOrElse(config.eventLoopType.serverWorkerGroup(config.numThreads))
 
-
-    //val server = new Server(bossGroup, config.limit)
     val bootstrap = new ServerBootstrap
     bootstrap.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 
     val serverQueue = async.boundedQueue[Process[Task, Exchange[ByteVector, ByteVector]]](config.limit)
 
-    bootstrap.group(bossGroup, config.eventLoopType.serverWorkerGroup(config.numThreads))
+    bootstrap.group(bossGroup, workerGroup)
       .channel(config.eventLoopType.serverChannel)
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, config.keepAlive)
       .option[java.lang.Boolean](ChannelOption.TCP_NODELAY, config.tcpNoDelay)
@@ -171,10 +170,18 @@ private[netty] object Server {
   } join
 }
 
-final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType)
+final case class ServerConfig(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean,
+                              soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType,
+                              bossPool: Option[EventLoopGroup], workerPool: Option[EventLoopGroup])
 
 object ServerConfig {
+  def apply(keepAlive: Boolean, numThreads: Int, limit: Int, codeFrames: Boolean, tcpNoDelay: Boolean,
+            soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType): ServerConfig =
+    new ServerConfig(keepAlive, numThreads, limit, codeFrames, tcpNoDelay, soSndBuf, soRcvBuf, eventLoopType, None, None)
+
+
   // 1000?  does that even make sense?
-  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors/2, 1000, true, false, None, None, EventLoopType.Select)
+  val Default = ServerConfig(true, Runtime.getRuntime.availableProcessors/2, 1000, true, false, None, None,
+    EventLoopType.Select, None, None)
 
 }
