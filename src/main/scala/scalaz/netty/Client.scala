@@ -21,11 +21,11 @@ import java.net.InetSocketAddress
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
-import _root_.io.netty.bootstrap._
-import _root_.io.netty.buffer._
-import _root_.io.netty.channel._
-import _root_.io.netty.channel.socket._
-import _root_.io.netty.handler.codec._
+import io.netty.bootstrap._
+import io.netty.buffer._
+import io.netty.channel._
+import io.netty.channel.socket._
+import io.netty.handler.codec._
 import scodec.bits.ByteVector
 
 import scalaz.concurrent._
@@ -99,7 +99,9 @@ private[netty] object Client {
     val queue = BPAwareQueue[ByteVector](config.limit)
     val halt = new AtomicReference[Cause](Cause.End)
 
-    bootstrap.group(config.eventLoopType.clientWorkerGroup(1))
+    val workerPool = config.eventLoopPool.getOrElse(config.eventLoopType.clientWorkerGroup(1))
+
+    bootstrap.group(workerPool)
     bootstrap.channel(config.eventLoopType.channel)
     bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 
@@ -128,8 +130,12 @@ private[netty] object Client {
   } join
 }
 
-final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int], eventLoopType: EventLoopType)
+final case class ClientConfig(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int],
+                              soRcvBuf: Option[Int], eventLoopType: EventLoopType, eventLoopPool: Option[EventLoopGroup])
 
 object ClientConfig {
-  val Default = ClientConfig(true, 1000, false, None, None, EventLoopType.Select)
+  def apply(keepAlive: Boolean, limit: Int, tcpNoDelay: Boolean, soSndBuf: Option[Int], soRcvBuf: Option[Int],
+            eventLoopType: EventLoopType): ClientConfig = new ClientConfig(keepAlive, limit, tcpNoDelay, soSndBuf, soRcvBuf, eventLoopType, None)
+
+  val Default = ClientConfig(true, 1000, false, None, None, EventLoopType.Select, None)
 }
